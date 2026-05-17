@@ -35,6 +35,7 @@ function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onAppl
             title="Filtros Avançados"
             maxWidth="520px"
             onConfirm={handleApply}
+            className='modal-footer-buttons'
             footer={
                 <>
                     <button className="btn-modal-cancel" onClick={handleClear}>

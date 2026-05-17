@@ -1,7 +1,10 @@
 import Sidebar from '../../components/SideBar/sidebar';
+import { useConfig } from '../../contexts/ConfigContext';
 import './style.css';
 
 function Configuracoes() {
+    const { permiteEstoqueNegativo, setPermiteEstoqueNegativo } = useConfig();
+
     return (
         <div className="body-configuracoes">
             <Sidebar />
@@ -10,6 +13,46 @@ function Configuracoes() {
                     <h1>Configurações</h1>
                 </div>
                 <div className="configuracoes-body">
+                    {/* Comportamento de Vendas */}
+                    <div className="config-card">
+                        <div className="config-card-header">
+                            <div className="config-card-icon config-card-icon--green">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2>Comportamento de Vendas</h2>
+                                <p>Controle de estoque e permissões no ponto de venda</p>
+                            </div>
+                        </div>
+                        <div className="config-card-body">
+                            <div className="config-toggle-row">
+                                <div className="config-toggle-info">
+                                    <span className="config-toggle-label">Permitir venda com estoque zerado ou negativo</span>
+                                    <span className="config-toggle-desc">
+                                        Quando ativado, produtos com saldo zero ou negativo podem ser adicionados à venda. O estoque ficará negativo no cadastro do produto.
+                                    </span>
+                                </div>
+                                <button
+                                    id="toggle-estoque-negativo"
+                                    className={`config-toggle-btn ${permiteEstoqueNegativo ? 'active' : ''}`}
+                                    onClick={() => setPermiteEstoqueNegativo(!permiteEstoqueNegativo)}
+                                    aria-pressed={permiteEstoqueNegativo}
+                                    title={permiteEstoqueNegativo ? 'Desativar' : 'Ativar'}
+                                >
+                                    <span className="config-toggle-track">
+                                        <span className="config-toggle-thumb" />
+                                    </span>
+                                    <span className="config-toggle-status">
+                                        {permiteEstoqueNegativo ? 'Ativado' : 'Desativado'}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Dados da Empresa */}
                     <div className="config-card">
                         <div className="config-card-header">

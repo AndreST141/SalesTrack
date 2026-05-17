@@ -117,7 +117,6 @@ function Historico() {
             key: 'pagamentos',
             label: 'Pagamento',
             render: (pagamentos, row) => {
-                // Se tem array de pagamentos com múltiplas formas
                 if (pagamentos && pagamentos.length > 0) {
                     return (
                         <div className="badges-pagamento">
@@ -129,7 +128,6 @@ function Historico() {
                         </div>
                     );
                 }
-                // Fallback: usar formaPagamento da venda
                 return (
                     <span className={`badge ${badgePagamento(row.formaPagamento)}`}>
                         {formatarPagamento(row.formaPagamento)}
@@ -184,6 +182,7 @@ function Historico() {
                     isOpen={modalDetalhes}
                     onClose={() => { setModalDetalhes(false); setVendaSelecionada(null); }}
                     title={vendaSelecionada ? `Venda #${vendaSelecionada.idVenda}` : 'Detalhes da Venda'}
+                    className='modal-footer-buttons'
                     maxWidth="700px"
                 >
                     {loadingDetalhes ? (
@@ -206,8 +205,6 @@ function Historico() {
                                 <span className="detail-label">Vendedor</span>
                                 <span className="detail-value">{vendaSelecionada.vendedorNome}</span>
                             </div>
-
-                            {/* Seção de Pagamentos */}
                             <div className="detail-row">
                                 <span className="detail-label">Pagamento</span>
                                 <span className="detail-value">

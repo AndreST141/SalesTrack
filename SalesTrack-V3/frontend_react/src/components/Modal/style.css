@@ -96,6 +96,13 @@
 .body-modal .modal-container .modal-footer {
     padding: 16px 24px;
     border-top: 1px solid #f1f5f9;
+
+}
+
+/* modal-footer-buttons na page de produtos, clientes ativos/inativos */
+.body-modal .modal-container.modal-footer-buttons .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f1f5f9;
     display: flex;
     justify-content: space-between;
 }
@@ -273,7 +280,8 @@
 
 .body-modal .modal-container .modal-footer .modal-footer-actions {
     display: flex;
-    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
 }
 
 .body-modal .modal-container .modal-footer .btn-modal-status {

@@ -148,6 +148,101 @@
     font-family: inherit;
 }
 
+/* ── Icon variant ─────────────────────────────────────────────────── */
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header .config-card-icon--green {
+    background: #f0fdf4;
+}
+
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header .config-card-icon--green svg {
+    color: #16a34a;
+}
+
+/* ── Toggle Row ───────────────────────────────────────────────────── */
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-desc {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+/* Toggle button wrapper */
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+/* Track */
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-track {
+    width: 48px;
+    height: 26px;
+    background: #cbd5e1;
+    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    padding: 0 3px;
+    transition: background 0.25s ease;
+    position: relative;
+}
+
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn.active .config-toggle-track {
+    background: #16a34a;
+}
+
+/* Thumb */
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-thumb {
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    transition: transform 0.25s ease;
+    transform: translateX(0);
+    display: block;
+}
+
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn.active .config-toggle-thumb {
+    transform: translateX(22px);
+}
+
+/* Status label */
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-status {
+    font-size: 10px;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+    transition: color 0.2s;
+}
+
+.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn.active .config-toggle-status {
+    color: #16a34a;
+}
+
 /* ── Badge ────────────────────────────────────────────────────────── */
 .body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-badge {
     position: absolute;

@@ -55,11 +55,8 @@ function Produtos() {
             setLoading(false);
         }
     }
-
-    // Recarregar quando o filtro de status mudar
     useEffect(() => {
         carregarDados();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeFilters._status]);
 
     function abrirModalNovo() {
@@ -257,6 +254,7 @@ function Produtos() {
                     onClose={() => setModalForm(false)}
                     title={produtoSelecionado ? 'Editar Produto' : 'Novo Produto'}
                     onConfirm={salvarProduto}
+                    // className='modal-footer-buttons'
                     footer={
                         <div className="modal-footer-split">
                             {/* Lado esquerdo: inativar/reativar (somente ao editar) */}
@@ -265,7 +263,7 @@ function Produtos() {
                                     className={`btn-modal-status ${estaAtivo ? 'btn-modal-inativar' : 'btn-modal-reativar'}`}
                                     onClick={() => setModalConfirmarInativar(true)}
                                 >
-                                    {estaAtivo ? '⊘ Inativar' : '✓ Reativar'}
+                                    {estaAtivo ? 'Inativar' : 'Reativar'}
                                 </button>
                             )}
                             {/* Lado direito: cancelar + salvar */}
@@ -352,6 +350,7 @@ function Produtos() {
 
                 {/* Modal confirmar inativar/reativar */}
                 <Modal
+                    className="modal-footer-buttons"
                     isOpen={modalConfirmarInativar}
                     onClose={() => setModalConfirmarInativar(false)}
                     title={estaAtivo ? 'Inativar Produto' : 'Reativar Produto'}

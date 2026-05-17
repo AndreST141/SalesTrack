@@ -294,7 +294,7 @@ function Clientes() {
                                     className={`btn-modal-status ${estaAtivo ? 'btn-modal-inativar' : 'btn-modal-reativar'}`}
                                     onClick={() => setModalConfirmarInativar(true)}
                                 >
-                                    {estaAtivo ? '⊘ Inativar' : '✓ Reativar'}
+                                    {estaAtivo ? 'Inativar' : 'Reativar'}
                                 </button>
                             )}
                             <div className="modal-footer-actions">
@@ -403,6 +403,7 @@ function Clientes() {
                     title={estaAtivo ? 'Inativar Cliente' : 'Reativar Cliente'}
                     maxWidth="420px"
                     onConfirm={inativarOuReativar}
+                    className="modal-footer-buttons"
                     footer={
                         <>
                             <button className="btn-modal-cancel" onClick={() => setModalConfirmarInativar(false)}>

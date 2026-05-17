@@ -14,7 +14,7 @@ function normalizeStr(str) {
 }
 
 function Vendas() {
-    const { formasPagamento } = useConfig();
+    const { formasPagamento, permiteEstoqueNegativo } = useConfig();
 
     const [produtos, setProdutos] = useState([]);
     const [clientes, setClientes] = useState([]);
@@ -149,22 +149,24 @@ function Vendas() {
     function adicionarProduto(produto) {
         if (!produto) return;
 
-        if (produto.estoque <= 0) {
-            showNotification('Produto sem estoque disponível', 'warning');
-            return;
-        }
-
         const qtd = Math.max(1, quantidade);
-        if (qtd > produto.estoque) {
-            showNotification(`Estoque insuficiente! Disponível: ${produto.estoque}`, 'warning');
-            return;
+
+        if (!permiteEstoqueNegativo) {
+            if (produto.estoque <= 0) {
+                showNotification('Produto sem estoque disponível', 'warning');
+                return;
+            }
+            if (qtd > produto.estoque) {
+                showNotification(`Estoque insuficiente! Disponível: ${produto.estoque}`, 'warning');
+                return;
+            }
         }
 
         setItensVenda((prev) => {
             const existente = prev.find((i) => i.idProduto === produto.idProduto);
             if (existente) {
                 const novaQtd = existente.quantidade + qtd;
-                if (novaQtd > produto.estoque) {
+                if (!permiteEstoqueNegativo && novaQtd > produto.estoque) {
                     showNotification(`Estoque insuficiente! Disponível: ${produto.estoque}`, 'warning');
                     return prev;
                 }
@@ -426,6 +428,13 @@ function Vendas() {
         const algumodalAberto = modalDesconto || modalAcrescimo || modalCpf || modalPagamento || modalCancelarVenda || modalCancelarItem || modalTroco;
 
         if (modalPagamento) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setModalPagamento(false);
+                inputBarcodeRef.current?.focus();
+                return;
+            }
+            
             handlePaymentKeyDown(e);
             return;
         }
