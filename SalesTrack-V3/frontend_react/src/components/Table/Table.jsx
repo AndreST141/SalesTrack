@@ -29,9 +29,28 @@ function Table({
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
 
-  const activeFilterCount = Object.values(activeFilters).filter(
-    (v) => v !== '' && v !== null && v !== undefined
+  const activeFilterCount = Object.entries(activeFilters).filter(
+    ([key, v]) => {
+      if (v === '' || v === null || v === undefined) return false;
+      const filterDef = (advancedFilters || []).find((f) => f.key === key);
+      // Não conta se o valor for igual ao padrão (defaultValue) do filtro
+      if (filterDef?.defaultValue !== undefined && v === filterDef.defaultValue) return false;
+      return true;
+    }
   ).length;
+
+  // Converte uma data para string "YYYY-MM-DD" no fuso LOCAL do browser.
+  // Usando toLocaleDateString('en-CA') garantimos que uma venda registrada
+  // às 21:22 no Brasil (UTC-3) seja tratada como dia 13/05, não como 14/05
+  // (que seria o caso se usássemos getUTC* com o horário UTC 00:22 do dia seguinte).
+  // O input do filtro (<input type="date">) já entrega "YYYY-MM-DD" diretamente,
+  // então comparar strings é seguro e elimina qualquer ambiguidade de fuso.
+  const toLocalDateStr = (input) => {
+    if (!input) return null;
+    const d = new Date(input);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('en-CA'); // 'en-CA' → formato YYYY-MM-DD
+  };
 
   const dadosFiltrados = useMemo(() => {
     let result = data;
@@ -40,30 +59,55 @@ function Table({
       result = result.filter((item) => {
         return Object.entries(activeFilters).every(([key, filterValue]) => {
           if (filterValue === '' || filterValue === null || filterValue === undefined) return true;
-          
+
           if (key === '_estoqueStatus') {
             if (filterValue === 'negativo') return (item.estoque ?? 0) < 0;
             if (filterValue === 'positivo') return (item.estoque ?? 0) > 0;
             if (filterValue === 'zero') return (item.estoque ?? 0) === 0;
             return true;
           }
+
           if (key === '_status') {
             if (filterValue === 'ativo') return item.ativo !== false && item.ativo !== 0;
             if (filterValue === 'inativo') return item.ativo === false || item.ativo === 0;
             return true;
           }
+
+          // Comparação de datas: usa o dia LOCAL para não sofrer com offset de fuso.
+          // Exemplo: "2026-05-13T21:22:30" (sem timezone) → JS lê como local → dia 13.
+          // Se usássemos getUTC*, em UTC-3 seria 00:22 do dia 14 → comparação errada.
           if (key === '_dataInicio') {
-            const itemDate = new Date(item.dataVenda);
-            const filterDate = new Date(filterValue);
-            return itemDate >= filterDate;
+            const itemStr = toLocalDateStr(item.dataVenda);
+            if (!itemStr) return true;
+            return itemStr >= filterValue; // filterValue já é "YYYY-MM-DD" do input
           }
           if (key === '_dataFim') {
-            const itemDate = new Date(item.dataVenda);
-            const filterDate = new Date(filterValue);
-            filterDate.setHours(23, 59, 59, 999);
-            return itemDate <= filterDate;
+            const itemStr = toLocalDateStr(item.dataVenda);
+            if (!itemStr) return true;
+            return itemStr <= filterValue;
           }
 
+          // Igualdade exata: lido da definição do filtro (exactMatch: true).
+          // Cobre idVenda, idProduto, idCliente e qualquer outro ID sem hardcode.
+          // String() nos dois lados: banco retorna number, input HTML retorna string.
+          const filterDef = (advancedFilters || []).find((f) => f.key === key);
+          if (filterDef?.exactMatch) {
+            return String(item[key]) === String(filterValue).trim();
+          }
+
+          // Pagamento com múltiplas formas: percorre item.pagamentos[] em vez de
+          // usar item.formaPagamento (que pode conter só o primeiro ou estar vazio).
+          // Suporta tanto p.formaPagamento quanto p.forma (variações de campo do backend).
+          if (key === 'formaPagamento') {
+            const formas = Array.isArray(item.pagamentos)
+              ? item.pagamentos.map((p) => p.formaPagamento ?? p.forma)
+              : [item.formaPagamento ?? item.forma];
+            return formas.some(
+              (forma) => forma != null && normalizeStr(String(forma)) === normalizeStr(String(filterValue))
+            );
+          }
+
+          // Fallback genérico: busca parcial para campos de texto livre
           const itemValue = item[key];
           if (itemValue == null) return false;
           return normalizeStr(itemValue).includes(normalizeStr(filterValue));
@@ -108,7 +152,7 @@ function Table({
     }
 
     return result;
-  }, [data, termoBusca, searchKeys, activeFilters, sortConfig]);
+  }, [data, termoBusca, searchKeys, activeFilters, sortConfig, advancedFilters]);
 
 
   const totalPaginas = Math.max(1, Math.ceil(dadosFiltrados.length / itemsPerPage));
