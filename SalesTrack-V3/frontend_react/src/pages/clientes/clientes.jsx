@@ -187,13 +187,16 @@ function Clientes() {
         : true;
 
     const filterDefinitions = [
-        { key: 'idCliente', label: 'ID do Cliente', type: 'text', placeholder: 'Ex: 1' },
+        { key: 'idCliente', label: 'ID do Cliente', type: 'text', placeholder: 'Ex: 1', exactMatch: true },
         { key: 'nome', label: 'Nome', type: 'text', placeholder: 'Nome do cliente...' },
         { key: 'cpf', label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
+        { key: 'telefone', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000' },
+        { key: 'email', label: 'Email', type: 'text', placeholder: 'email@exemplo.com' },
         {
             key: '_status',
             label: 'Status',
             type: 'select',
+            defaultValue: 'ativo',
             options: [
                 { value: 'ativo', label: 'Ativos' },
                 { value: 'inativo', label: 'Inativos' },

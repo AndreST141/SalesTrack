@@ -147,7 +147,7 @@ function Produtos() {
         : true;
 
     const filterDefinitions = [
-        { key: 'idProduto', label: 'ID do Produto', type: 'text', placeholder: 'Ex: 1' },
+        { key: 'idProduto', label: 'ID do Produto', type: 'text', placeholder: 'Ex: 1', exactMatch: true },
         { key: 'nome', label: 'Nome', type: 'text', placeholder: 'Nome do produto...' },
         {
             key: 'categoriaNome',
@@ -169,6 +169,7 @@ function Produtos() {
             key: '_status',
             label: 'Status',
             type: 'select',
+            defaultValue: 'ativo',
             options: [
                 { value: 'ativo', label: 'Ativos' },
                 { value: 'inativo', label: 'Inativos' },
