@@ -14,10 +14,10 @@ Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes
 ```text
 SalesTrack/
 +-- backend_api-rest/   # API REST em Python + Flask
-+-- frontend_react/     # Interface React + Vite
-+-- database/           # Script de criacao e carga inicial do MySQL
-+-- docker-compose.yml  # Orquestracao dos containers
-+-- .env.example        # Exemplo de variaveis de ambiente
++-- frontend_react/     # React + Vite
++-- database/           # Banco de Dados MySQL
++-- docker-compose.yml  # Containers do Docker
++-- .env.example        # Exemplo de login do MySQL
 +-- README.md
 ```
 
