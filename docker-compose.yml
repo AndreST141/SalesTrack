@@ -1,0 +1,51 @@
+services:
+  database:
+    image: mysql:8.4
+    container_name: salestrack_database
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-salestrack}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - salestrack_mysql_data:/var/lib/mysql
+      - ./database/database_setup.sql:/docker-entrypoint-initdb.d/01_database_setup.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend_api-rest
+    container_name: salestrack_backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: database
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-salestrack}
+      DB_CHARSET: utf8mb4
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend_react
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    container_name: salestrack_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - backend
+
+volumes:
+  salestrack_mysql_data:
