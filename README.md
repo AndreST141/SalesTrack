@@ -9,7 +9,7 @@ Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes
 - Gabriel Pedro Silva Dutra - 2310154
 - Guilherme Poloniato Salomao - 2310359
 
-## Estrutura do Projeto
+## 📂 Estrutura do Projeto
 
 ```text
 SalesTrack/
@@ -23,7 +23,7 @@ SalesTrack/
 +-- README.md
 ```
 
-## Tecnologias Utilizadas
+## 🛠️ Tecnologias Utilizadas
 
 | Camada | Tecnologia |
 |--------|------------|
@@ -106,16 +106,16 @@ Tambem e possivel informar um periodo:
 docker compose exec backend python scripts/gerar_vendas.py --quantidade 50 --data-inicio 2026-05-01 --data-fim 2026-05-30
 ```
 
-## Credenciais de Teste
+## 🔑 Credenciais de Teste
 
 | Perfil | Email | Senha |
 |--------|-------|-------|
 | Administrador | admin@salestrack.com | admin123 |
 | Vendedor | vendedor@salestrack.com | vendedor123 |
 
-## Execucao Manual sem Docker
+# ⚙️Execução Manual sem Docker
 
-Use esta opcao apenas se quiser executar cada camada separadamente.
+Use esta opção apenas se quiser executar cada camada separadamente.
 
 ### Banco de Dados
 
@@ -155,4 +155,4 @@ npm install
 npm run dev
 ```
 
-O frontend manual ficara disponivel em `http://localhost:5173`.
+O frontend manual ficará disponível em [http://localhost:5173](http://localhost:5173).
