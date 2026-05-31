@@ -1,0 +1,388 @@
+/* ── Overlay ──────────────────────────────────────────────────────────── */
+.body-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Container ────────────────────────────────────────────────────────── */
+.body-modal .modal-container {
+    background: #fff;
+    border-radius: 14px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.25s ease;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.body-modal .modal-container .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.body-modal .modal-container .modal-header h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+    margin: 0;
+}
+
+.body-modal .modal-container .modal-header .modal-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.body-modal .modal-container .modal-header .modal-close svg {
+    width: 16px;
+    height: 16px;
+    color: #64748b;
+}
+
+.body-modal .modal-container .modal-header .modal-close:hover {
+    background: #e2e8f0;
+}
+
+.body-modal .modal-container .modal-header .modal-close:hover svg {
+    color: #0f172a;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+.body-modal .modal-container .modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: none; 
+    -ms-overflow-style: none; 
+}
+
+.body-modal .modal-container .modal-body::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+.body-modal .modal-container .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f1f5f9;
+
+}
+
+/* modal-footer-buttons na page de produtos, clientes ativos/inativos */
+.body-modal .modal-container.modal-footer-buttons .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+}
+
+.body-modal .modal-container .modal-footer .pagamento-modal-footer-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-cancel {
+    padding: 10px 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-cancel:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-confirm {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-confirm:hover {
+    background: #1d4ed8;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-danger {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-danger:hover {
+    background: #b91c1c;
+}
+
+/* ── Form styles inside modal ─────────────────────────────────────────── */
+.body-modal .modal-container .modal-body .form-group {
+    margin-bottom: 18px;
+}
+
+.body-modal .modal-container .modal-body .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+.body-modal .modal-container .modal-body .form-group input,
+.body-modal .modal-container .modal-body .form-group select,
+.body-modal .modal-container .modal-body .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e293b;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background: #fff;
+}
+
+.body-modal .modal-container .modal-body .form-group input:focus,
+.body-modal .modal-container .modal-body .form-group select:focus,
+.body-modal .modal-container .modal-body .form-group textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.body-modal .modal-container .modal-body .form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.body-modal .modal-container .modal-body .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.body-modal .modal-container .modal-body .form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+}
+
+/* ── Sale Detail styles ───────────────────────────────────────────────── */
+.body-modal .modal-container .modal-body .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+}
+
+.body-modal .modal-container .modal-body .detail-row .detail-label {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.body-modal .modal-container .modal-body .detail-row .detail-value {
+    font-size: 14px;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.body-modal .modal-container .modal-body .detail-section {
+    margin-top: 20px;
+}
+
+.body-modal .modal-container .modal-body .detail-section h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+}
+
+.body-modal .modal-container .modal-body .detail-totals {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.body-modal .modal-container .modal-body .detail-totals .total-final {
+    font-size: 18px;
+    color: #16a34a;
+    padding-top: 10px;
+    border-top: 2px solid #e2e8f0;
+    margin-top: 8px;
+}
+
+.body-modal .modal-container .modal-body .confirm-message {
+    font-size: 14px;
+    color: #475569;
+    text-align: center;
+    padding: 20px 0;
+    line-height: 1.6;
+}
+
+/* ══ Shared: Modal footer split (Produtos + Clientes) ════════════════ */
+.body-modal .modal-container .modal-footer .modal-footer-split {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+}
+
+.body-modal .modal-container .modal-footer .modal-footer-actions {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-status {
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-inativar {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-inativar:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-reativar {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.body-modal .modal-container .modal-footer .btn-modal-reativar:hover {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+}
+
+/* ── Status indicator inside modal body ────────────────────────────── */
+.body-modal .modal-container .modal-body .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #475569;
+    margin-top: 12px;
+}
+
+.body-modal .modal-container .modal-body .status-indicator.status-ativo {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+.body-modal .modal-container .modal-body .status-indicator.status-inativo {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.body-modal .modal-container .modal-body .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.body-modal .modal-container .modal-body .status-ativo .status-dot { background: #16a34a; }
+.body-modal .modal-container .modal-body .status-inativo .status-dot { background: #dc2626; }
+
+/* ── Confirm buttons for inativar/reativar ─────────────────────────── */
+.btn-modal-inativar-confirm {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.btn-modal-inativar-confirm:hover:not(:disabled) { background: #b91c1c; }
+
+.btn-modal-reativar-confirm {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.btn-modal-reativar-confirm:hover:not(:disabled) { background: #15803d; }
+
+.btn-modal-inativar-confirm:disabled,
+.btn-modal-reativar-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -1,4 +1,4 @@
-# Variáveis de Ambiente (MUITO IMPORTANTE)
+# Variaveis de Ambiente
 .env
 .env.local
 .env.*.local
@@ -8,14 +8,19 @@ logs
 *.log
 npm-debug.log*
 
-# Dependências (Node)
+# Dependencias Node
 node_modules/
 
-# Pasta de build de produção
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Build
 dist/
 dist-ssr/
 
-# Arquivos de editores/sistema
+# Editores e sistema
 .vscode/
 .idea/
 .DS_Store

@@ -1,0 +1,96 @@
+.body-historico {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.body-historico .content-historico {
+    flex: 1;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+.body-historico .content-historico .title-page {
+    display: flex;
+    height: 9vh;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    background-color: #fff;
+    box-shadow: 0 1px 0 #e2e8f0;
+    flex-shrink: 0;
+}
+
+.body-historico .content-historico .title-page h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────── */
+.body-historico .content-historico .historico-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ── Detail Items Table (inside modal) ────────────────────────────── */
+.detail-items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.detail-items-table th {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.detail-items-table td {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #1e293b;
+    font-weight: 500;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* ── Múltiplos Pagamentos (badges na tabela) ─────────────────────── */
+.badges-pagamento {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.badges-pagamento .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+/* ── Pagamentos no Modal de Detalhes ─────────────────────────────── */
+.detail-pagamentos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.detail-pagamento-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail-pagamento-valor {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}

@@ -1,95 +1,115 @@
-# SalesTrack - Sistema de Gestão de Vendas
+# SalesTrack - Sistema de Gestao de Vendas
 
-Sistema web de gestão de vendas com dashboard, controle de produtos, clientes e histórico de vendas.
-
-## Evolução do Projeto (Histórico)
-
-Este repositório está organizado para mostrar a evolução técnica do sistema ao longo do desenvolvimento:
-
-- **v1 (Protótipo Inicial):** Modelo inicial com arquitetura e interface primárias. Foco na marcação básica com HTML, CSS e JavaScript estático "bruto".
-- **v2 (Aplicação API REST):** Reestruturação do sistema para o formato de API backend e banco de dados, separando a lógica de dados da interface.
-- **v3 (Integração com React):** Versão atualizada utilizando React + Vite para o frontend, consumindo a API e oferecendo uma experiência de usuário moderna.
+Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes, historico de vendas e relatorios.
 
 ## Integrantes do Grupo
 
 - Matheus Sabino Ribeiro - 2313148
-- André Marcos de Sousa Tavares - 2313280
+- Andre Marcos de Sousa Tavares - 2313280
 - Gabriel Pedro Silva Dutra - 2310154
-- Guilherme Poloniato Salomão - 2310359
+- Guilherme Poloniato Salomao - 2310359
+
+## Estrutura do Projeto
+
+```text
+SalesTrack/
++-- BACKEND/
+|   +-- backend_api-rest/   # API REST em Python + Flask
+|   +-- database/           # Script de criacao e carga inicial do MySQL
++-- FRONTEND/
+|   +-- frontend_react/     # Interface React + Vite
++-- docker-compose.yml      # Orquestracao dos containers
++-- .env.example            # Exemplo de variaveis de ambiente
++-- README.md
+```
 
 ## Tecnologias Utilizadas
 
+| Camada | Tecnologia |
+|--------|------------|
 | Frontend | React + Vite |
-| Backend | Python com Flask |
-| Banco de Dados | MySQL |
+| Backend | Python + Flask |
+| Banco de dados | MySQL |
+| Ambiente | Docker + Docker Compose |
+| Servidor do frontend | Nginx |
 
-## Como Executar
+## Como Executar com Docker
 
-### Pré-requisitos
+### Pre-requisitos
 
-- [Python 3.11+](https://www.python.org/) instalado
-- [Node.js 18+](https://nodejs.org/) instalado
-- [MySQL 9.5+](https://downloads.mysql.com/archives/community/) instalado e rodando
+- Docker Desktop instalado e em execucao
 
-### 1. Banco de Dados
+Com Docker, nao e necessario instalar Python, Node.js, dependencias do projeto ou MySQL manualmente.
 
-Abra o **CMD como administrador** e execute os comandos abaixo:
+### 1. Configurar variaveis
 
-```bash
-cd "C:\Program Files\MySQL\MySQL Server 9.5\bin"
-mysql -u root -p
+Na raiz do projeto, copie o arquivo de exemplo:
+
+```powershell
+copy .env.example .env
 ```
 
-Digite sua senha do MySQL. Em seguida, execute o script abaixo:
+### 2. Subir o projeto
 
-```sql
-source C:/caminho/para/SalesTrack-V3/database/database_setup.sql
+Na raiz do projeto, execute:
+
+```powershell
+docker compose up --build
 ```
 
-> Exemplo: `source C:/Users/andre/OneDrive/Documentos/SalesTrack-V3/database/database_setup.sql`
+O Docker Compose ira criar e iniciar tres servicos:
 
-### 2. Configurar o `.env`
+- `salestrack_database`: banco MySQL com o script `BACKEND/database/database_setup.sql`.
+- `salestrack_backend`: API Flask conectada ao banco.
+- `salestrack_frontend`: aplicacao React servida pelo Nginx.
 
-Abra o arquivo `backend_V2/.env` e coloque a sua senha do MySQL:
+### 3. Acessar o sistema
 
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=sua_senha
-DB_NAME=salestrack
+- Frontend: `http://localhost:5173`
+- Backend/API: `http://localhost:5000`
+- MySQL: `localhost:3307` ou a porta configurada em `MYSQL_PORT`
+
+### 4. Comandos uteis
+
+Ver containers em execucao:
+
+```powershell
+docker compose ps
 ```
 
-### 3. Backend
+Ver logs:
 
-Abra um terminal, entre na pasta `backend_V2` e execute:
-
-```bash
-cd backend_V2
-pip install -r requirements.txt
-python app.py
+```powershell
+docker compose logs backend --tail=50
+docker compose logs frontend --tail=50
+docker compose logs database --tail=50
 ```
 
-> O `pip install` só é necessário na primeira vez.
+Parar os containers:
 
-O servidor ficará disponível em: `http://localhost:5000`
-
-### 4. Frontend (React)
-
-Abra um **segundo terminal**, entre na pasta `frontend-react` e execute:
-
-```bash
-cd frontend_react
-npm install
-npm run dev
+```powershell
+docker compose down
 ```
 
-> O `npm install` só é necessário na primeira vez.
+Parar e apagar os dados do volume MySQL:
 
-O sistema ficará disponível em: `http://localhost:5173`
+```powershell
+docker compose down -v
+```
 
-> Os dois terminais (backend e frontend) precisam ficar abertos enquanto o sistema estiver em uso.
+## Script de Vendas para Teste
 
----
+Com o sistema rodando via Docker, e possivel gerar vendas aleatorias pela API:
+
+```powershell
+docker compose exec backend python scripts/gerar_vendas.py --quantidade 50
+```
+
+Tambem e possivel informar um periodo:
+
+```powershell
+docker compose exec backend python scripts/gerar_vendas.py --quantidade 50 --data-inicio 2026-05-01 --data-fim 2026-05-30
+```
 
 ## Credenciais de Teste
 
@@ -98,6 +118,46 @@ O sistema ficará disponível em: `http://localhost:5173`
 | Administrador | admin@salestrack.com | admin123 |
 | Vendedor | vendedor@salestrack.com | vendedor123 |
 
----
+## Execucao Manual sem Docker
 
-🔗 **Backend:** O código da API e banco de dados está localizado no repositório [SalesTrack-Back](https://github.com/AndreST141/SalesTrack-Back)
+Use esta opcao apenas se quiser executar cada camada separadamente.
+
+### Banco de Dados
+
+Abra o MySQL e execute:
+
+```sql
+source C:/caminho/para/SalesTrack/BACKEND/database/database_setup.sql
+```
+
+### Backend
+
+Crie um arquivo `BACKEND/backend_api-rest/.env` com:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=sua_senha
+DB_NAME=salestrack
+DB_CHARSET=utf8mb4
+```
+
+Depois execute:
+
+```powershell
+cd BACKEND/backend_api-rest
+pip install -r requirements.txt
+python app.py
+```
+
+### Frontend
+
+Em outro terminal:
+
+```powershell
+cd FRONTEND/frontend_react
+npm install
+npm run dev
+```
+
+O frontend manual ficara disponivel em `http://localhost:5173`.
