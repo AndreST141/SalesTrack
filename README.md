@@ -15,10 +15,10 @@ Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes
 SalesTrack/
 +-- BACKEND/
 |   +-- backend_api-rest/   # API REST em Python + Flask
-|   +-- database/           # Script de criacao e carga inicial do MySQL
+|   +-- database/           # Script do MySQL
 +-- FRONTEND/
-|   +-- frontend_react/     # Interface React + Vite
-+-- docker-compose.yml      # Orquestracao dos containers
+|   +-- frontend_react/     # React + Vite
++-- docker-compose.yml      # Containers
 +-- .env.example            # Exemplo de variaveis de ambiente
 +-- README.md
 ```
@@ -30,8 +30,7 @@ SalesTrack/
 | Frontend | React + Vite |
 | Backend | Python + Flask |
 | Banco de dados | MySQL |
-| Ambiente | Docker + Docker Compose |
-| Servidor do frontend | Nginx |
+| Servidor | Docker + Docker Compose |
 
 ## Como Executar com Docker
 
@@ -56,12 +55,6 @@ Na raiz do projeto, execute:
 ```powershell
 docker compose up --build
 ```
-
-O Docker Compose ira criar e iniciar tres servicos:
-
-- `salestrack_database`: banco MySQL com o script `BACKEND/database/database_setup.sql`.
-- `salestrack_backend`: API Flask conectada ao banco.
-- `salestrack_frontend`: aplicacao React servida pelo Nginx.
 
 ### 3. Acessar o sistema
 
