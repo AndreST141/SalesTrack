@@ -1,0 +1,220 @@
+.body-login {
+    background-color: #050A24;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ── Elementos Decorativos  ── */
+.body-login .eclipse-decor {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 0;
+    opacity: 0.4;
+}
+
+.decor-1 {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, #1570EF 0%, transparent 70%);
+    bottom: -150px;
+    left: -150px;
+}
+
+.decor-2 {
+    width: 450px;
+    height: 450px;
+    background: radial-gradient(circle, #004A80 0%, transparent 70%);
+    top: -100px;
+    right: -100px;
+}
+
+/* ── Box Principal ── */
+.body-login .box-login {
+    background-color: #FEFEFE;
+    width: 400px;
+    padding: 40px 0;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    position: relative;
+    z-index: 1;
+}
+
+.body-login .box-login .logo-title {
+    text-align: center;
+}
+
+.body-login .box-login .logo-title h1 {
+    color: #004A80;
+    font-weight: 800;
+    font-size: 36px;
+    font-style: italic;
+    margin: 0;
+    letter-spacing: -1px;
+}
+
+.body-login .box-login .logo-title h2 {
+    color: #004A808C;
+    font-weight: 800;
+    font-size: 11px;
+    margin-top: -5px;
+    text-transform: uppercase;
+}
+
+.body-login .box-login .h2-acessar {
+    text-align: center;
+    font-weight: 600;
+    font-size: 20px;
+    margin-top: 30px;
+    color: #101828;
+}
+
+/* ── Formulário ── */
+.body-login .box-login .form-login {
+    margin: 40px 30px 0;
+}
+
+.body-login .box-login .form-login .linha-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.body-login .box-login .form-login .linha-flex .campo {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.body-login .box-login .form-login .linha-flex .campo label {
+    color: #344054;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.body-login .box-login .form-login .linha-flex .campo .sobre-senha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.body-login .box-login .form-login .linha-flex .campo .sobre-senha span {
+    color: #1570EF;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+
+.body-login .box-login .form-login .linha-flex .campo .sobre-senha span:hover {
+    filter: brightness(1.2);
+}
+
+.body-login .box-login .form-login .linha-flex .campo input {
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #D0D5DD;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    font-size: 15px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+.body-login .box-login .form-login .linha-flex .campo input:focus {
+    border-color: #84CAFF;
+    box-shadow: 0 0 0 4px #D1E9FF;
+}
+
+.body-login .box-login .form-login .linha-flex .campo input::placeholder {
+    color: #667085;
+}
+
+/* ── Botão ── */
+.body-login .box-login .form-login .button button {
+    background-color: #1570EF;
+    color: #FFFFFF;
+    font-weight: 500;
+    font-size: 15px;
+    width: 100%;
+    border: 1px solid #1570EF;
+    padding: 10px 0;
+    border-radius: 8px;
+    margin-top: 24px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.body-login .box-login .form-login .button button:hover {
+    background-color: #ffffff;
+    color: #1570EF;
+}
+
+.body-login .box-login .form-login .button button:disabled {
+    background-color: #D1E9FF;
+    border-color: #D1E9FF;
+    cursor: not-allowed;
+}
+
+/* ── Info de Teste ── */
+.body-login .box-login .login-info {
+    margin: 25px 30px 0;
+    padding: 12px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+    text-align: left;
+}
+
+.body-login .box-login .login-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.body-login .box-login .login-info p strong {
+    color: #475569;
+    display: block;
+    margin-bottom: 2px;
+}
+
+/* ── Footer ── */
+.body-login .box-login .footer-box-login {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.body-login .box-login .footer-box-login p {
+    color: #667085;
+    font-weight: 400;
+    font-size: 14px;
+}
+
+.body-login .box-login .footer-box-login span {
+    color: #1570EF;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    margin-left: 4px;
+}
+
+.body-login .box-login .footer-box-login span:hover {
+    text-decoration: underline;
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+    .body-login .box-login {
+        width: 90%;
+        margin: 20px;
+    }
+}

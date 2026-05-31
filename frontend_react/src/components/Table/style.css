@@ -1,0 +1,400 @@
+/* ── Header Bar (Search + Actions) ─────────────────────────────────────── */
+.body-table .table-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.body-table .table-header-bar .table-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    flex: 1;
+    max-width: 480px;
+    transition: border-color 0.2s;
+}
+
+.body-table .table-header-bar .table-search:focus-within {
+    border-color: #2563eb;
+}
+
+.body-table .table-header-bar .table-search .search-icon {
+    width: 18px;
+    height: 18px;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.body-table .table-header-bar .table-search input {
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #1e293b;
+    width: 100%;
+    background: transparent;
+    font-family: inherit;
+}
+
+.body-table .table-header-bar .table-search input::placeholder {
+    color: #94a3b8;
+}
+
+.body-table .table-header-bar .table-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.body-table .table-header-bar .table-header-actions .btn-primary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.body-table .table-header-bar .table-header-actions .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.body-table .table-header-bar .table-header-actions .btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.body-table .table-header-bar .table-header-actions .btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+/* ── Filter Button ────────────────────────────────────────────────────── */
+.body-table .table-header-bar .table-header-actions .btn-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+    position: relative;
+}
+
+.body-table .table-header-bar .table-header-actions .btn-filter:hover {
+    background: #f8fafc;
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+.body-table .table-header-bar .table-header-actions .btn-filter .filter-badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0 5px;
+    margin-left: 2px;
+}
+
+/* ── Table Wrapper ─────────────────────────────────────────────────────── */
+.body-table .table-wrapper {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Fixed-height scroll area to prevent table resize on pagination */
+.body-table .table-wrapper .table-scroll-area {
+    overflow-x: auto;
+    flex: 1;
+}
+
+.body-table .table-wrapper .table-scroll-area .table {
+    width: 100%;
+    text-align: left;
+    table-layout: auto;
+    border-collapse: collapse;
+}
+
+/* ── Table Head ────────────────────────────────────────────────────────── */
+.body-table .table-wrapper .table-scroll-area .table thead {
+    height: 44px;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    background: #f8fafc;
+}
+
+/* ── Sortable Headers ─────────────────────────────────────────────────── */
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s, background 0.2s;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sortable:hover {
+    color: #2563eb;
+    background: #eef2ff;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sorted {
+    color: #2563eb;
+    background: #eef2ff;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th .th-sort-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th .sort-icon {
+    font-size: 10px;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sortable:hover .sort-icon {
+    opacity: 0.7;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sorted .sort-icon {
+    opacity: 1;
+    color: #2563eb;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead .th-acoes {
+    text-align: right;
+    padding-right: 24px;
+}
+
+/* ── Table Body ────────────────────────────────────────────────────────── */
+.body-table .table-wrapper .table-scroll-area .table tbody td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #1e293b;
+    font-weight: 500;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody tr {
+    height: 48px;
+    transition: background 0.15s;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody tr:hover:not(.linha-fantasma) {
+    background: #f8fafc;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody tr.row-clickable {
+    cursor: pointer;
+}
+
+/* ── Actions Column ────────────────────────────────────────────────────── */
+.body-table .table-wrapper .table-scroll-area .table tbody .acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-right: 16px;
+    align-items: center;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody .acoes .btn-action {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.2s;
+    color: #475569;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody .acoes .btn-action:hover {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody .acoes .btn-action.btn-danger {
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.body-table .table-wrapper .table-scroll-area .table tbody .acoes .btn-action.btn-danger:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+/* ── Ghost Rows ────────────────────────────────────────────────────────── */
+.body-table .table-wrapper .table-scroll-area .table tbody .linha-fantasma td {
+    border-bottom: none;
+    visibility: hidden;
+    padding: 0;
+    height: 52.89px;
+}
+
+/* ── Empty / Loading States ─────────────────────────────────────────── */
+.body-table .table-wrapper .table-scroll-area .table .table-empty,
+.body-table .table-wrapper .table-scroll-area .table .table-loading {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 40px 16px;
+    height: auto;
+}
+
+/* ── Table Footer / Pagination ────────────────────────────────────────── */
+.body-table .table-wrapper .table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-top: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.body-table .table-wrapper .table-footer .table-info {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.body-table .table-wrapper .table-footer .pagination {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.body-table .table-wrapper .table-footer .pagination button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    color: #64748b;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.body-table .table-wrapper .table-footer .pagination button:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.body-table .table-wrapper .table-footer .pagination button.active {
+    background: #2563eb;
+    color: #fff;
+}
+
+.body-table .table-wrapper .table-footer .pagination button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.body-table .table-wrapper .table-footer .pagination .pagination-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+}
+
+.body-table .table-wrapper .table-footer .pagination .pagination-arrow svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ── Badges (usadas nas colunas) ──────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.badge-danger {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.badge-info {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.badge-neutral {
+    background: #f1f5f9;
+    color: #64748b;
+}

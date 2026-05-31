@@ -1,0 +1,39 @@
+.body-produtos {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.body-produtos .content-produtos {
+    flex: 1;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+.body-produtos .content-produtos .title-page {
+    display: flex;
+    height: 9vh;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    background-color: #fff;
+    box-shadow: 0 1px 0 #e2e8f0;
+    flex-shrink: 0;
+}
+
+.body-produtos .content-produtos .title-page h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────── */
+.body-produtos .content-produtos .produtos-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    flex: 1;
+}

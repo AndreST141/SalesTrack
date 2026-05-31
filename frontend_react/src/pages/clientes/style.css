@@ -1,0 +1,489 @@
+/* ── Layout base ──────────────────────────────────────────────────── */
+.body-clientes {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.body-clientes .content-clientes {
+    flex: 1;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+.body-clientes .content-clientes .title-page {
+    display: flex;
+    height: 9vh;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    background-color: #fff;
+    box-shadow: 0 1px 0 #e2e8f0;
+    flex-shrink: 0;
+}
+
+.body-clientes .content-clientes .title-page h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────── */
+.body-clientes .content-clientes .clientes-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ── Botão Convênio na tabela ─────────────────────────────────────── */
+.btn-convenio {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+    color: #fff !important;
+    border-color: #7c3aed !important;
+    font-weight: 600 !important;
+}
+
+.btn-convenio:hover {
+    background: linear-gradient(135deg, #6d28d9, #5b21b6) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(109, 40, 217, 0.35);
+}
+
+/* ── Toggle Switch de Convênio ────────────────────────────────────── */
+.convenio-section {
+    margin-top: 4px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    margin-bottom: 4px;
+}
+
+.convenio-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.convenio-toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.convenio-toggle-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.convenio-toggle-desc {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #cbd5e1;
+    border-radius: 24px;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: #7c3aed;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+}
+
+.convenio-limite-field {
+    margin-top: 14px;
+    margin-bottom: 0 !important;
+}
+
+/* ── Status Indicator ─────────────────────────────────────────────── */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #475569;
+    margin-top: 4px;
+}
+
+.status-indicator.status-ativo {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+.status-indicator.status-inativo {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-ativo .status-dot { background: #16a34a; }
+.status-inativo .status-dot { background: #dc2626; }
+
+/* ── Modal footer split ───────────────────────────────────────────── */
+.modal-footer-split {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+}
+
+.modal-footer-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-modal-status {
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btn-modal-inativar {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.btn-modal-inativar:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+.btn-modal-reativar {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.btn-modal-reativar:hover {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+}
+
+.btn-modal-inativar-confirm {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.btn-modal-inativar-confirm:hover:not(:disabled) { background: #b91c1c; }
+
+.btn-modal-reativar-confirm {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.btn-modal-reativar-confirm:hover:not(:disabled) { background: #15803d; }
+
+.btn-modal-inativar-confirm:disabled,
+.btn-modal-reativar-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MODAL CONVÊNIO
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Cards de resumo ── */
+.convenio-resumo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.convenio-resumo-card {
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.convenio-card-devedor {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.convenio-card-limite {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+.convenio-card-pago {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+.convenio-card-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.convenio-card-valor {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+.convenio-card-valor.devedor { color: #dc2626; }
+.convenio-card-valor.pago    { color: #16a34a; }
+
+.convenio-card-sub {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* ── Barra de limite ── */
+.convenio-limite-bar-wrapper {
+    margin-bottom: 20px;
+}
+
+.convenio-limite-bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.limite-critico { color: #dc2626 !important; }
+
+.convenio-limite-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.convenio-limite-fill {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.4s ease;
+}
+
+.fill-ok     { background: #16a34a; }
+.fill-alerta { background: #d97706; }
+.fill-critico{ background: #dc2626; }
+
+/* ── Section title ── */
+.convenio-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+    margin-top: 8px;
+}
+
+.convenio-vazio-tag {
+    font-size: 11px;
+    font-weight: 500;
+    color: #16a34a;
+    background: #f0fdf4;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid #bbf7d0;
+}
+
+/* ── Tabelas do convênio ── */
+.convenio-table-wrapper {
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.convenio-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.convenio-table thead th {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+.convenio-table tbody td {
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.convenio-table tbody tr:last-child td { border-bottom: none; }
+
+.convenio-table tbody tr:hover { background: #f8fafc; }
+
+.compra-paga-row td { color: #94a3b8; }
+
+.convenio-td-data { font-size: 12px; color: #64748b !important; }
+
+.convenio-td-valor { font-weight: 700; }
+.convenio-td-valor.pendente { color: #dc2626 !important; }
+.convenio-td-valor.pago     { color: #16a34a !important; }
+
+/* ── Botão pagar item ── */
+.btn-pagar-item {
+    padding: 5px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+}
+
+.btn-pagar-item:hover { background: #1d4ed8; }
+
+/* ── Botão pagar tudo ── */
+.btn-pagar-tudo {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+}
+
+.btn-pagar-tudo:hover { background: linear-gradient(135deg, #15803d, #166534) !important; }
+
+/* ── Empty state ── */
+.convenio-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 20px;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.convenio-empty span { font-size: 32px; }
+
+/* ── Modal footer ── */
+.convenio-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* ── Pagamento convênio info ── */
+.pagamento-convenio-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+}
+
+.pagamento-convenio-cliente {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.pagamento-convenio-valor {
+    font-size: 20px;
+    font-weight: 800;
+    color: #16a34a;
+}
+
+.pagamento-convenio-aviso {
+    font-size: 11px;
+    color: #d97706;
+    background: #fefce8;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+}

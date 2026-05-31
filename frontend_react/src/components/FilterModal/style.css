@@ -1,0 +1,87 @@
+/* ── Filter Modal Grid ────────────────────────────────────────────── */
+.filter-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.filter-modal-grid .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-modal-grid .filter-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.filter-modal-grid .filter-field input,
+.filter-modal-grid .filter-field select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e293b;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background: #fff;
+}
+
+.filter-modal-grid .filter-field input:focus,
+.filter-modal-grid .filter-field select:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+/* ── Active Filter Pills ───────────────────────────────────────────── */
+.filter-active-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.filter-active-pills .filter-pills-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-active-pills .filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #eff6ff;
+    color: #2563eb;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.filter-active-pills .filter-pill button {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    margin-left: 2px;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+
+.filter-active-pills .filter-pill button:hover {
+    opacity: 1;
+}
