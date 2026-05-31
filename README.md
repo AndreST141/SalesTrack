@@ -28,8 +28,7 @@ SalesTrack/
 | Frontend | React + Vite |
 | Backend | Python + Flask |
 | Banco de dados | MySQL |
-| Ambiente | Docker + Docker Compose |
-| Servidor do frontend | Nginx |
+| Servidor | Docker + Docker Compose |
 
 ## Como Executar com Docker
 
@@ -74,8 +73,8 @@ O Docker Compose ira criar e iniciar tres servicos:
 
 ### 3. Acessar o sistema
 
-- Frontend: `http://localhost:5173`
-- Backend/API: `http://localhost:5000`
+- Frontend: http://localhost:5173
+- Backend/API: http://localhost:5000
 - MySQL: `localhost:3307` ou a porta configurada em `MYSQL_PORT`
 
 ### 4. Comandos uteis
