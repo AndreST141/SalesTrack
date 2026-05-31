@@ -30,13 +30,13 @@ SalesTrack/
 | Banco de dados | MySQL |
 | Servidor | Docker + Docker Compose |
 
-## Como Executar com Docker
+## 🚀 Como Executar com Docker
 
-### Pre-requisitos
+### Pré-requisitos
 
-- Docker Desktop instalado e em execucao
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e em execução
 
-Com Docker, nao e necessario instalar Python, Node.js, dependencias do projeto ou MySQL manualmente.
+Com Docker, não é necessário instalar Python, Node.js, dependências do projeto ou MySQL manualmente.
 
 ## 1. Configurar variaveis
 
@@ -44,17 +44,6 @@ Na raiz do projeto, copie o arquivo de exemplo:
 
 ```powershell
 copy .env.example .env
-```
-
-Exemplo de configuracao:
-
-```env
-MYSQL_ROOT_PASSWORD=root
-DB_NAME=salestrack
-MYSQL_PORT=3307
-BACKEND_PORT=5000
-FRONTEND_PORT=5173
-VITE_API_URL=http://localhost:5000/api
 ```
 
 ## 2. Subir o projeto
@@ -65,17 +54,10 @@ Na raiz do projeto, execute:
 docker compose up --build
 ```
 
-O Docker Compose ira criar e iniciar tres servicos:
-
-- `salestrack_database`: banco MySQL com o script `database/database_setup.sql`.
-- `salestrack_backend`: API Flask conectada ao banco.
-- `salestrack_frontend`: aplicacao React servida pelo Nginx.
-
-## 3. Acessar o sistema
+## 🌐 3. Acessar o sistema
 
 - Frontend: http://localhost:5173
 - Backend/API: http://localhost:5000
-- MySQL: `localhost:3307` ou a porta configurada em `MYSQL_PORT`
 
 ## 4. Comandos uteis
 
@@ -104,6 +86,49 @@ Parar e apagar os dados do volume MySQL:
 ```powershell
 docker compose down -v
 ```
+## ⚙️ 5. Dockerfile do Backend
+
+```Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["python", "app.py"]
+```
+## 🎨 6. Dockerfile do Frontend
+
+```Dockerfile
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+ARG VITE_API_URL=http://localhost:5000/api
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN npm run build
+
+FROM nginx:1.27-alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+```
 
 ## Credenciais de Teste
 
@@ -112,7 +137,7 @@ docker compose down -v
 | Administrador | admin@salestrack.com | admin123 |
 | Vendedor | vendedor@salestrack.com | vendedor123 |
 
-## Execucao Manual sem Docker
+## Execução Manual sem Docker
 
 Use esta opcao apenas se quiser executar cada camada separadamente.
 
