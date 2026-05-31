@@ -2,7 +2,7 @@
 
 Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes, historico de vendas e relatorios.
 
-## Integrantes do Grupo
+## 👥 Integrantes do Grupo
 
 - Matheus Sabino Ribeiro - 2313148
 - Andre Marcos de Sousa Tavares - 2313280
@@ -38,7 +38,7 @@ SalesTrack/
 
 Com Docker, nao e necessario instalar Python, Node.js, dependencias do projeto ou MySQL manualmente.
 
-### 1. Configurar variaveis
+## 1. Configurar variaveis
 
 Na raiz do projeto, copie o arquivo de exemplo:
 
@@ -57,7 +57,7 @@ FRONTEND_PORT=5173
 VITE_API_URL=http://localhost:5000/api
 ```
 
-### 2. Subir o projeto
+## 2. Subir o projeto
 
 Na raiz do projeto, execute:
 
@@ -71,13 +71,13 @@ O Docker Compose ira criar e iniciar tres servicos:
 - `salestrack_backend`: API Flask conectada ao banco.
 - `salestrack_frontend`: aplicacao React servida pelo Nginx.
 
-### 3. Acessar o sistema
+## 3. Acessar o sistema
 
 - Frontend: http://localhost:5173
 - Backend/API: http://localhost:5000
 - MySQL: `localhost:3307` ou a porta configurada em `MYSQL_PORT`
 
-### 4. Comandos uteis
+## 4. Comandos uteis
 
 Ver containers em execucao:
 
