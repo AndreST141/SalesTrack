@@ -2,7 +2,7 @@
 
 Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes, historico de vendas e relatorios.
 
-## 👥 Integrantes do Grupo
+## Integrantes do Grupo
 
 - Matheus Sabino Ribeiro - 2313148
 - Andre Marcos de Sousa Tavares - 2313280
@@ -13,11 +13,13 @@ Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes
 
 ```text
 SalesTrack/
-+-- backend_api-rest/   # API REST em Python + Flask
-+-- frontend_react/     # React + Vite
-+-- database/           # Banco de Dados MySQL
-+-- docker-compose.yml  # Containers do Docker
-+-- .env.example        # Exemplo de login do MySQL
++-- BACKEND/
+|   +-- backend_api-rest/   # API REST em Python + Flask
+|   +-- database/           # Script de criacao e carga inicial do MySQL
++-- FRONTEND/
+|   +-- frontend_react/     # Interface React + Vite
++-- docker-compose.yml      # Orquestracao dos containers
++-- .env.example            # Exemplo de variaveis de ambiente
 +-- README.md
 ```
 
@@ -28,17 +30,18 @@ SalesTrack/
 | Frontend | React + Vite |
 | Backend | Python + Flask |
 | Banco de dados | MySQL |
-| Servidor | Docker + Docker Compose |
+| Ambiente | Docker + Docker Compose |
+| Servidor do frontend | Nginx |
 
-## 🚀 Como Executar com Docker
+## Como Executar com Docker
 
-### Pré-requisitos
+### Pre-requisitos
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e em execução
+- Docker Desktop instalado e em execucao
 
-Com Docker, não é necessário instalar Python, Node.js, dependências do projeto ou MySQL manualmente.
+Com Docker, nao e necessario instalar Python, Node.js, dependencias do projeto ou MySQL manualmente.
 
-## 1. Configurar variaveis
+### 1. Configurar variaveis
 
 Na raiz do projeto, copie o arquivo de exemplo:
 
@@ -46,7 +49,7 @@ Na raiz do projeto, copie o arquivo de exemplo:
 copy .env.example .env
 ```
 
-## 2. Subir o projeto
+### 2. Subir o projeto
 
 Na raiz do projeto, execute:
 
@@ -54,12 +57,19 @@ Na raiz do projeto, execute:
 docker compose up --build
 ```
 
-## 🌐 3. Acessar o sistema
+O Docker Compose ira criar e iniciar tres servicos:
 
-- Frontend: http://localhost:5173
-- Backend/API: http://localhost:5000
+- `salestrack_database`: banco MySQL com o script `BACKEND/database/database_setup.sql`.
+- `salestrack_backend`: API Flask conectada ao banco.
+- `salestrack_frontend`: aplicacao React servida pelo Nginx.
 
-## 4. Comandos uteis
+### 3. Acessar o sistema
+
+- Frontend: `http://localhost:5173`
+- Backend/API: `http://localhost:5000`
+- MySQL: `localhost:3307` ou a porta configurada em `MYSQL_PORT`
+
+### 4. Comandos uteis
 
 Ver containers em execucao:
 
@@ -86,48 +96,19 @@ Parar e apagar os dados do volume MySQL:
 ```powershell
 docker compose down -v
 ```
-## ⚙️ 5. Dockerfile do Backend
 
-```Dockerfile
-FROM python:3.11-slim
+## Script de Vendas para Teste
 
-WORKDIR /app
+Com o sistema rodando via Docker, e possivel gerar vendas aleatorias pela API:
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 5000
-
-CMD ["python", "app.py"]
+```powershell
+docker compose exec backend python scripts/gerar_vendas.py --quantidade 50
 ```
-## 🎨 6. Dockerfile do Frontend
 
-```Dockerfile
-FROM node:20-alpine AS build
+Tambem e possivel informar um periodo:
 
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-
-ARG VITE_API_URL=http://localhost:5000/api
-ENV VITE_API_URL=$VITE_API_URL
-
-RUN npm run build
-
-FROM nginx:1.27-alpine
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-
-EXPOSE 80
+```powershell
+docker compose exec backend python scripts/gerar_vendas.py --quantidade 50 --data-inicio 2026-05-01 --data-fim 2026-05-30
 ```
 
 ## Credenciais de Teste
@@ -137,7 +118,7 @@ EXPOSE 80
 | Administrador | admin@salestrack.com | admin123 |
 | Vendedor | vendedor@salestrack.com | vendedor123 |
 
-## Execução Manual sem Docker
+## Execucao Manual sem Docker
 
 Use esta opcao apenas se quiser executar cada camada separadamente.
 
@@ -146,12 +127,12 @@ Use esta opcao apenas se quiser executar cada camada separadamente.
 Abra o MySQL e execute:
 
 ```sql
-source C:/caminho/para/SalesTrack/database/database_setup.sql
+source C:/caminho/para/SalesTrack/BACKEND/database/database_setup.sql
 ```
 
 ### Backend
 
-Crie um arquivo `backend_api-rest/.env` com:
+Crie um arquivo `BACKEND/backend_api-rest/.env` com:
 
 ```env
 DB_HOST=localhost
@@ -164,7 +145,7 @@ DB_CHARSET=utf8mb4
 Depois execute:
 
 ```powershell
-cd backend_api-rest
+cd BACKEND/backend_api-rest
 pip install -r requirements.txt
 python app.py
 ```
@@ -174,7 +155,7 @@ python app.py
 Em outro terminal:
 
 ```powershell
-cd frontend_react
+cd FRONTEND/frontend_react
 npm install
 npm run dev
 ```

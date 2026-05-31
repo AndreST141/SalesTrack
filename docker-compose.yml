@@ -11,7 +11,7 @@ services:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - salestrack_mysql_data:/var/lib/mysql
-      - ./database/database_setup.sql:/docker-entrypoint-initdb.d/01_database_setup.sql:ro
+      - ./BACKEND/database/database_setup.sql:/docker-entrypoint-initdb.d/01_database_setup.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -20,7 +20,7 @@ services:
 
   backend:
     build:
-      context: ./backend_api-rest
+      context: ./BACKEND/backend_api-rest
     container_name: salestrack_backend
     restart: unless-stopped
     environment:
@@ -37,7 +37,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend_react
+      context: ./FRONTEND/frontend_react
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
     container_name: salestrack_frontend
