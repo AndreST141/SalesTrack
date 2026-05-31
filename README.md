@@ -2,7 +2,7 @@
 
 Sistema web para gestao de vendas, com dashboard, controle de produtos, clientes, historico de vendas e relatorios.
 
-## Integrantes do Grupo
+## 👥 Integrantes do Grupo
 
 - Matheus Sabino Ribeiro - 2313148
 - Andre Marcos de Sousa Tavares - 2313280
@@ -32,15 +32,15 @@ SalesTrack/
 | Banco de dados | MySQL |
 | Servidor | Docker + Docker Compose |
 
-## Como Executar com Docker
+## 🚀 Como Executar com Docker
 
 ### Pre-requisitos
 
-- Docker Desktop instalado e em execucao
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e em execução
 
 Com Docker, nao e necessario instalar Python, Node.js, dependencias do projeto ou MySQL manualmente.
 
-### 1. Configurar variaveis
+## 1. Configurar variaveis
 
 Na raiz do projeto, copie o arquivo de exemplo:
 
@@ -48,7 +48,7 @@ Na raiz do projeto, copie o arquivo de exemplo:
 copy .env.example .env
 ```
 
-### 2. Subir o projeto
+## 2. Subir o projeto
 
 Na raiz do projeto, execute:
 
@@ -56,13 +56,15 @@ Na raiz do projeto, execute:
 docker compose up --build
 ```
 
-### 3. Acessar o sistema
+## 🌐 3 Acessando a Aplicação
 
-- Frontend: `http://localhost:5173`
-- Backend/API: `http://localhost:5000`
-- MySQL: `localhost:3307` ou a porta configurada em `MYSQL_PORT`
+Após executar todos os passos, a aplicação estará disponível em:
 
-### 4. Comandos uteis
+* **Frontend:** http://localhost:5173
+* **Backend (API):** http://localhost:5000
+* **MySQL:** `localhost:3307`
+
+## 4. Comandos uteis
 
 Ver containers em execucao:
 
@@ -90,7 +92,7 @@ Parar e apagar os dados do volume MySQL:
 docker compose down -v
 ```
 
-## Script de Vendas para Teste
+## 5. Script de Vendas para Teste
 
 Com o sistema rodando via Docker, e possivel gerar vendas aleatorias pela API:
 
