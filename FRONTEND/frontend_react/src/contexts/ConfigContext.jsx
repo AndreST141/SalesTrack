@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
+import StorageService from '../services/storageService';
 
 const FORMAS_PADRAO = [
     { value: 'dinheiro',       label: 'Dinheiro',        icon: '💵', shortcut: 'F1' },
@@ -9,32 +10,56 @@ const FORMAS_PADRAO = [
     { value: 'convenio',       label: 'Convênio',         icon: '🤝', shortcut: 'F6' },
 ];
 
+// ─── Defaults ──────────────────────────────────────────────────────
+
+const DADOS_EMPRESA_DEFAULT = {
+    cadastro: {
+        razaoSocial: '',
+        nomeFantasia: '',
+        cnpj: '',
+        inscricaoEstadual: '',
+    },
+    endereco: {
+        cep: '',
+        logradouro: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        pais: 'Brasil',
+    },
+};
+
+const CONFIG_IMPRESSORA_DEFAULT = {
+    formato: 'cupom_80mm',
+};
+
+// ─── Loaders (via StorageService) ──────────────────────────────────
+
 function carregarFormas() {
-    try {
-        const salvo = localStorage.getItem('formasPagamento');
-        if (salvo) {
-            const parsed = JSON.parse(salvo);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-    } catch (_) { /* ignore */ }
+    const salvo = StorageService.get('formasPagamento', null);
+    if (Array.isArray(salvo) && salvo.length > 0) return salvo;
     return FORMAS_PADRAO;
 }
 
 function carregarPermiteExcluir() {
-    try {
-        return localStorage.getItem('permiteExcluir') === 'true';
-    } catch (_) {
-        return false;
-    }
+    return StorageService.get('permiteExcluir', false);
 }
 
 function carregarPermiteEstoqueNegativo() {
-    try {
-        return localStorage.getItem('permiteEstoqueNegativo') === 'true';
-    } catch (_) {
-        return false;
-    }
+    return StorageService.get('permiteEstoqueNegativo', false);
 }
+
+function carregarDadosEmpresa() {
+    return StorageService.get('dadosEmpresa', DADOS_EMPRESA_DEFAULT);
+}
+
+function carregarConfigImpressora() {
+    return StorageService.get('configImpressora', CONFIG_IMPRESSORA_DEFAULT);
+}
+
+// ─── Context ───────────────────────────────────────────────────────
 
 const ConfigContext = createContext(null);
 
@@ -42,6 +67,8 @@ export function ConfigProvider({ children }) {
     const [formasPagamento, setFormasPagamento] = useState(carregarFormas);
     const [permiteExcluir, setPermiteExcluirState] = useState(carregarPermiteExcluir);
     const [permiteEstoqueNegativo, setPermiteEstoqueNegativoState] = useState(carregarPermiteEstoqueNegativo);
+    const [dadosEmpresa, setDadosEmpresaState] = useState(carregarDadosEmpresa);
+    const [configImpressora, setConfigImpressoraState] = useState(carregarConfigImpressora);
 
     const salvarFormas = useCallback((novasFormas) => {
         // Reatribuir atalhos F1, F2... na ordem
@@ -50,22 +77,32 @@ export function ConfigProvider({ children }) {
             shortcut: `F${i + 1}`,
         }));
         setFormasPagamento(comAtalhos);
-        localStorage.setItem('formasPagamento', JSON.stringify(comAtalhos));
+        StorageService.set('formasPagamento', comAtalhos);
     }, []);
 
     const setPermiteExcluir = useCallback((valor) => {
         setPermiteExcluirState(valor);
-        localStorage.setItem('permiteExcluir', String(valor));
+        StorageService.set('permiteExcluir', valor);
     }, []);
 
     const setPermiteEstoqueNegativo = useCallback((valor) => {
         setPermiteEstoqueNegativoState(valor);
-        localStorage.setItem('permiteEstoqueNegativo', String(valor));
+        StorageService.set('permiteEstoqueNegativo', valor);
+    }, []);
+
+    const setDadosEmpresa = useCallback((dados) => {
+        setDadosEmpresaState(dados);
+        StorageService.set('dadosEmpresa', dados);
+    }, []);
+
+    const setConfigImpressora = useCallback((config) => {
+        setConfigImpressoraState(config);
+        StorageService.set('configImpressora', config);
     }, []);
 
     const resetFormas = useCallback(() => {
         setFormasPagamento(FORMAS_PADRAO);
-        localStorage.removeItem('formasPagamento');
+        StorageService.remove('formasPagamento');
     }, []);
 
     return (
@@ -77,7 +114,13 @@ export function ConfigProvider({ children }) {
             setPermiteExcluir,
             permiteEstoqueNegativo,
             setPermiteEstoqueNegativo,
+            dadosEmpresa,
+            setDadosEmpresa,
+            configImpressora,
+            setConfigImpressora,
             FORMAS_PADRAO,
+            DADOS_EMPRESA_DEFAULT,
+            CONFIG_IMPRESSORA_DEFAULT,
         }}>
             {children}
         </ConfigContext.Provider>

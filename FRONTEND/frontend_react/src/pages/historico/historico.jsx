@@ -76,7 +76,7 @@ function Historico() {
         }
     }
     const filterDefinitions = [
-        { key: 'idVenda', label: 'ID da Venda', type: 'text', placeholder: 'Ex: 1' },
+        { key: 'idVenda', label: 'ID da Venda', type: 'text', placeholder: 'Ex: 1', exactMatch: true },
         {
             key: 'formaPagamento',
             label: 'Forma de Pagamento',

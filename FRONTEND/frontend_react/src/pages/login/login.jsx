@@ -83,7 +83,7 @@ function Login() {
             <div className="campo">
               <div className="sobre-senha">
                 <label>Senha</label>
-                <span onClick={handleForgotPassword}>Esqueceu a senha?</span>
+                {/* <span onClick={handleForgotPassword}>Esqueceu a senha?</span> */}
               </div>
               <input
                 type="password"
@@ -100,11 +100,11 @@ function Login() {
             </button>
           </div>
         </form>
-        <div className="login-info">
+        {/* <div className="login-info">
             <p><strong>Usuários de teste:</strong></p>
             <p>Admin: admin@salestrack.com / admin123</p>
             <p>Vendedor: vendedor@salestrack.com / vendedor123</p>
-        </div>
+        </div> */}
         <div className="footer-box-login">
           <p>Não possui acesso? <span onClick={handleRequestAccess}>Solicite aqui</span></p>
         </div>
