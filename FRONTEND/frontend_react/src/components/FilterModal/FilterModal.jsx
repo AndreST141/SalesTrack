@@ -56,7 +56,7 @@ function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onAppl
                                 value={localFilters[filter.key] || ''}
                                 onChange={(e) => handleChange(filter.key, e.target.value)}
                             >
-                                {/* <option value="">Todos</option> */}
+                                <option value="">Selecione</option>
                                 {(filter.options || []).map((opt) => (
                                     <option key={opt.value} value={opt.value}>
                                         {opt.label}
@@ -81,11 +81,17 @@ function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onAppl
                 ))}
             </div>
 
-            {Object.entries(localFilters).some(([, v]) => v !== '' && v !== null && v !== undefined) && (
+            {Object.entries(localFilters).some(([key, v]) =>
+                v !== '' && v !== null && v !== undefined &&
+                !(filters.find((f) => f.key === key)?.defaultValue === v)
+            ) && (
                 <div className="filter-active-pills">
                     <span className="filter-pills-label">Filtros ativos:</span>
                     {Object.entries(localFilters)
-                        .filter(([, v]) => v !== '' && v !== null && v !== undefined)
+                        .filter(([key, v]) =>
+                            v !== '' && v !== null && v !== undefined &&
+                            !(filters.find((f) => f.key === key)?.defaultValue === v)
+                        )
                         .map(([key, value]) => {
                             const filterDef = filters.find((f) => f.key === key);
                             const displayValue = filterDef?.type === 'select'

@@ -42,7 +42,7 @@
 }
 
 /* ── Config Card ──────────────────────────────────────────────────── */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card {
+.config-card {
     background: #fff;
     border-radius: 14px;
     border: 1px solid #f1f5f9;
@@ -51,7 +51,7 @@
     overflow: hidden;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header {
+.config-card .config-card-header {
     display: flex;
     align-items: center;
     gap: 14px;
@@ -59,7 +59,7 @@
     border-bottom: 1px solid #f1f5f9;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header .config-card-icon {
+.config-card .config-card-header .config-card-icon {
     width: 42px;
     height: 42px;
     background: #eff6ff;
@@ -70,38 +70,39 @@
     flex-shrink: 0;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header .config-card-icon svg {
+.config-card .config-card-header .config-card-icon svg {
     width: 20px;
     height: 20px;
     color: #2563eb;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header h2 {
+.config-card .config-card-header h2 {
     font-size: 15px;
     font-weight: 700;
     color: #0f172a;
     margin: 0;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header p {
+.config-card .config-card-header p {
     font-size: 12px;
     color: #94a3b8;
     margin: 2px 0 0;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body {
+.config-card .config-card-body {
     padding: 18px 22px;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-field {
+/* ── Fields ───────────────────────────────────────────────────────── */
+.config-card .config-field {
     margin-bottom: 14px;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-field:last-child {
+.config-card .config-field:last-child {
     margin-bottom: 0;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-field label {
+.config-card .config-field label {
     display: block;
     font-size: 12px;
     font-weight: 600;
@@ -109,83 +110,279 @@
     margin-bottom: 6px;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-field input,
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-field select {
+.config-card .config-field label .required {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.config-card .config-field input,
+.config-card .config-field select {
     width: 100%;
     padding: 9px 12px;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-size: 13px;
     font-family: inherit;
-    color: #94a3b8;
-    background: #f8fafc;
+    color: #334155;
+    background: #fff;
     box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-row {
+.config-card .config-field input:focus,
+.config-card .config-field select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.config-card .config-field input[readonly] {
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: default;
+}
+
+.config-card .config-field input[disabled],
+.config-card .config-field select[disabled] {
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.config-card .config-field input.input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.config-card .config-field .field-error {
+    display: block;
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* ── Rows / Grids ─────────────────────────────────────────────────── */
+.config-card .config-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-actions-row {
-    display: flex;
-    gap: 10px;
+.config-card .config-row--3col {
+    grid-template-columns: 1fr 1fr 1fr;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-actions-row .config-btn {
+/* ── CEP Input Group ──────────────────────────────────────────────── */
+.cep-input-group {
+    position: relative;
     display: flex;
+    align-items: center;
+}
+
+.cep-input-group input {
+    padding-right: 36px;
+}
+
+.cep-spinner {
+    position: absolute;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e2e8f0;
+    border-top: 2px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Divider ──────────────────────────────────────────────────────── */
+.config-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 14px;
+}
+
+.config-divider::before,
+.config-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.config-divider span {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* ── Card Actions (Save button) ───────────────────────────────────── */
+.config-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.btn-primary:active {
+    transform: scale(0.97);
+}
+
+.btn-secondary {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 10px 18px;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    background: #f8fafc;
-    color: #94a3b8;
+    background: #fff;
+    color: #334155;
     font-size: 13px;
     font-weight: 500;
-    cursor: not-allowed;
+    cursor: pointer;
     font-family: inherit;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+}
+
+.btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.btn-secondary:active {
+    transform: scale(0.97);
+}
+
+.btn-secondary--import {
+    border-color: #dbeafe;
+    color: #2563eb;
+}
+
+.btn-secondary--import:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+/* ── Actions Row (Backup) ─────────────────────────────────────────── */
+.config-actions-row {
+    display: flex;
+    gap: 10px;
+}
+
+/* ── Info Box ──────────────────────────────────────────────────────── */
+.config-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.config-info-box svg {
+    color: #0284c7;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.config-info-box span {
+    font-size: 12px;
+    color: #0369a1;
+    line-height: 1.5;
+}
+
+/* ── Field button align (for print button beside select) ──────────── */
+.config-field--btn-align {
+    display: flex;
+    flex-direction: column;
 }
 
 /* ── Icon variant ─────────────────────────────────────────────────── */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header .config-card-icon--green {
-    background: #f0fdf4;
+.config-card-icon--green {
+    background: #f0fdf4 !important;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-header .config-card-icon--green svg {
-    color: #16a34a;
+.config-card-icon--green svg {
+    color: #16a34a !important;
+}
+
+.config-card-icon--purple {
+    background: #faf5ff !important;
+}
+
+.config-card-icon--purple svg {
+    color: #7c3aed !important;
+}
+
+.config-card-icon--amber {
+    background: #fffbeb !important;
+}
+
+.config-card-icon--amber svg {
+    color: #d97706 !important;
 }
 
 /* ── Toggle Row ───────────────────────────────────────────────────── */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-row {
+.config-toggle-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-info {
+.config-toggle-info {
     display: flex;
     flex-direction: column;
     gap: 4px;
     flex: 1;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-label {
+.config-toggle-label {
     font-size: 13px;
     font-weight: 600;
     color: #0f172a;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-desc {
+.config-toggle-desc {
     font-size: 12px;
     color: #64748b;
     line-height: 1.5;
 }
 
 /* Toggle button wrapper */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn {
+.config-toggle-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -198,7 +395,7 @@
 }
 
 /* Track */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-track {
+.config-toggle-track {
     width: 48px;
     height: 26px;
     background: #cbd5e1;
@@ -210,12 +407,12 @@
     position: relative;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn.active .config-toggle-track {
+.config-toggle-btn.active .config-toggle-track {
     background: #16a34a;
 }
 
 /* Thumb */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-thumb {
+.config-toggle-thumb {
     width: 20px;
     height: 20px;
     background: #fff;
@@ -226,12 +423,12 @@
     display: block;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn.active .config-toggle-thumb {
+.config-toggle-btn.active .config-toggle-thumb {
     transform: translateX(22px);
 }
 
 /* Status label */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-status {
+.config-toggle-status {
     font-size: 10px;
     font-weight: 600;
     color: #94a3b8;
@@ -239,12 +436,12 @@
     transition: color 0.2s;
 }
 
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-body .config-toggle-btn.active .config-toggle-status {
+.config-toggle-btn.active .config-toggle-status {
     color: #16a34a;
 }
 
 /* ── Badge ────────────────────────────────────────────────────────── */
-.body-configuracoes .content-configuracoes .configuracoes-body .config-card .config-card-badge {
+.config-card-badge {
     position: absolute;
     top: 16px;
     right: 16px;
@@ -254,4 +451,15 @@
     background: #fef3c7;
     padding: 3px 10px;
     border-radius: 20px;
+}
+
+/* ── Print: hide everything except the test page ──────────────────── */
+@media print {
+    .body-configuracoes .content-configuracoes .title-page,
+    .body-configuracoes .content-configuracoes .configuracoes-body {
+        display: block !important;
+    }
+    .body-configuracoes > *:not(.content-configuracoes) {
+        display: none !important;
+    }
 }

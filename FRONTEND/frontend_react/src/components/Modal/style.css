@@ -96,7 +96,21 @@
 .body-modal .modal-container .modal-footer {
     padding: 16px 24px;
     border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 12px;
+}
 
+/* Garante que qualquer div dentro do footer ocupe 100% e aplique o space-between */
+.body-modal .modal-container .modal-footer > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
 }
 
 /* modal-footer-buttons na page de produtos, clientes ativos/inativos */
@@ -105,11 +119,18 @@
     border-top: 1px solid #f1f5f9;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 12px;
 }
 
 .body-modal .modal-container .modal-footer .pagamento-modal-footer-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
 }
 
 .body-modal .modal-container .modal-footer .btn-modal-cancel {
