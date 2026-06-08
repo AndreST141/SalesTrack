@@ -164,6 +164,17 @@ Informando um período específico:
 docker-compose exec backend python scripts/gerar_vendas.py --quantidade 50 --data-inicio 2026-05-01 --data-fim 2026-05-30
 ```
 
+<<<<<<< HEAD
+=======
+## 🔑 Credenciais de Teste
+
+| Perfil | Email | Senha |
+|--------|-------|-------|
+| Administrador | admin@salestrack.com | admin123 |
+| Vendedor | vendedor@salestrack.com | vendedor123 |
+| Tecnico | tecnico| 20260607 |
+
+>>>>>>> 4e7573a (Fix capitalization for 'Tecnico' in README)
 # ⚙️Execução Manual sem Docker
 
 Use esta opção apenas se quiser executar cada camada separadamente.
