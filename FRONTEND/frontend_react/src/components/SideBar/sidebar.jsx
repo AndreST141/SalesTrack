@@ -27,7 +27,19 @@ function Sidebar() {
         navigate('/login');
     }
 
-    const tipoLabel = user?.tipo === 'admin' ? 'Administrador' : 'Vendedor';
+    const tipoLabel = {
+        admin: 'Administrador',
+        supervisor: 'Supervisor',
+        tecnico: 'Técnico',
+    }[user?.tipo] || 'Vendedor';
+
+    // TECNICO: usa nome fixo para evitar problema de encoding vindo do banco
+    const displayNome = user?.tipo === 'tecnico'
+        ? 'Técnico'
+        : (user?.nome || 'Usuário');
+
+    const isAdminOrTecnico = ['admin', 'tecnico'].includes(user?.tipo);
+    const isVendedor = user?.tipo === 'vendedor';
 
     return (
         <div className="body-sidebar">
@@ -40,10 +52,12 @@ function Sidebar() {
                     <hr />
                 </div>
                 <div className="sidebar-menu">
-                    <div className={`menu-select ${itemActive === '/dashboard' ? 'ativo' : ''}`} onClick={() => handleItemClick('/dashboard')}>
-                        <img src={Dashboard} alt="" />
-                        <span>Dashboard</span>
-                    </div>
+                    {!isVendedor && (
+                        <div className={`menu-select ${itemActive === '/dashboard' ? 'ativo' : ''}`} onClick={() => handleItemClick('/dashboard')}>
+                            <img src={Dashboard} alt="" />
+                            <span>Dashboard</span>
+                        </div>
+                    )}
                     <div className={`menu-select ${itemActive === '/vendas' ? 'ativo' : ''}`} onClick={() => handleItemClick('/vendas')}>
                         <img src={Vendas} alt="" />
                         <span>Nova Venda</span>
@@ -60,22 +74,26 @@ function Sidebar() {
                         <img src={Clientes} alt="" />
                         <span>Clientes</span>
                     </div>
-                    <div className={`menu-select ${itemActive === '/relatorios' ? 'ativo' : ''}`} onClick={() => handleItemClick('/relatorios')}>
-                        <img src={Relatorios} alt="" />
-                        <span>Relatórios</span>
-                    </div>
-                    <div className={`menu-select ${itemActive === '/configuracoes' ? 'ativo' : ''}`} onClick={() => handleItemClick('/configuracoes')}>
-                        <img src={ConfigIcon} alt="" />
-                        <span>Configurações</span>
-                    </div>
+                    {isAdminOrTecnico && (
+                        <div className={`menu-select ${itemActive === '/relatorios' ? 'ativo' : ''}`} onClick={() => handleItemClick('/relatorios')}>
+                            <img src={Relatorios} alt="" />
+                            <span>Relatórios</span>
+                        </div>
+                    )}
+                    {isAdminOrTecnico && (
+                        <div className={`menu-select ${itemActive === '/configuracoes' ? 'ativo' : ''}`} onClick={() => handleItemClick('/configuracoes')}>
+                            <img src={ConfigIcon} alt="" />
+                            <span>Configurações</span>
+                        </div>
+                    )}
                 </div>
                 <div className="footer-sidebar">
                     <div className="footer-user-info">
                         <div className="footer-avatar">
-                            {(user?.nome || 'U').charAt(0).toUpperCase()}
+                            {displayNome.charAt(0).toUpperCase()}
                         </div>
                         <div className="footer-user-text">
-                            <span className="footer-user-name">{user?.nome || 'Usuário'}</span>
+                            <span className="footer-user-name">{displayNome}</span>
                             <span className="footer-user-role">{tipoLabel}</span>
                         </div>
                     </div>

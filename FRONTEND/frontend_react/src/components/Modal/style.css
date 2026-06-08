@@ -39,7 +39,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px;
+    padding: 10px 24px;
     border-bottom: 1px solid #f1f5f9;
 }
 
@@ -52,8 +52,8 @@
 }
 
 .body-modal .modal-container .modal-header .modal-close {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -66,8 +66,8 @@
 }
 
 .body-modal .modal-container .modal-header .modal-close svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: #64748b;
 }
 
@@ -81,7 +81,7 @@
 
 /* ── Body ─────────────────────────────────────────────────────────────── */
 .body-modal .modal-container .modal-body {
-    padding: 24px;
+    padding: 18px 24px 24px 24px;
     overflow-y: auto;
     flex: 1;
     scrollbar-width: none; 
@@ -235,6 +235,25 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 16px;
+}
+
+.body-modal .modal-container .modal-body .form-group input.input-error,
+.body-modal .modal-container .modal-body .form-group select.input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.body-modal .modal-container .modal-body .form-group .field-error {
+    display: block;
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.body-modal .modal-container .modal-body .form-group label .required {
+    color: #ef4444;
+    margin-left: 2px;
 }
 
 /* ── Sale Detail styles ───────────────────────────────────────────────── */

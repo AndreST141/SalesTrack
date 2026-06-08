@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import './style.css';
@@ -70,6 +70,7 @@ function Table({
           if (key === '_status') {
             if (filterValue === 'ativo') return item.ativo !== false && item.ativo !== 0;
             if (filterValue === 'inativo') return item.ativo === false || item.ativo === 0;
+            if (filterValue === 'todos') return true;
             return true;
           }
 
@@ -160,7 +161,7 @@ function Table({
   const fim = inicio + itemsPerPage;
   const dadosPaginados = dadosFiltrados.slice(inicio, fim);
 
-  useMemo(() => {
+  useEffect(() => {
     setPaginaAtual(1);
   }, [termoBusca, activeFilters, sortConfig]);
 
