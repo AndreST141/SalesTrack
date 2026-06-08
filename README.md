@@ -172,7 +172,7 @@ docker-compose exec backend python scripts/gerar_vendas.py --quantidade 50 --dat
 |--------|-------|-------|
 | Administrador | admin@salestrack.com | admin123 |
 | Vendedor | vendedor@salestrack.com | vendedor123 |
-| Tecnico | tecnico| 20260607 |
+| Tecnico | tecnico| anoMesDia |
 
 >>>>>>> 4e7573a (Fix capitalization for 'Tecnico' in README)
 # ⚙️Execução Manual sem Docker
