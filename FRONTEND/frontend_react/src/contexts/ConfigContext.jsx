@@ -7,7 +7,7 @@ const FORMAS_PADRAO = [
     { value: 'cartao_debito',  label: 'Cartão de Débito',  icon: '💳', shortcut: 'F3' },
     { value: 'pix',            label: 'PIX',              icon: '📱', shortcut: 'F4' },
     { value: 'outro',          label: 'Outro',            icon: '📋', shortcut: 'F5' },
-    { value: 'convenio',       label: 'Convênio',         icon: '🤝', shortcut: 'F6' },
+    // { value: 'convenio',       label: 'Convênio',         icon: '🤝', shortcut: 'F6' },
 ];
 
 // ─── Defaults ──────────────────────────────────────────────────────

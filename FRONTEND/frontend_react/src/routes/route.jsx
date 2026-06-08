@@ -15,13 +15,13 @@ function Router() {
             <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>}/>
+                <Route path="/dashboard" element={<PrivateRoute noVendedor><Dashboard /></PrivateRoute>}/>
                 <Route path="/vendas" element={<PrivateRoute><Vendas /></PrivateRoute>} />
                 <Route path="/historico" element={<PrivateRoute><Historico /></PrivateRoute>}/>
                 <Route path="/produtos" element={<PrivateRoute><Produtos /></PrivateRoute>}/>
                 <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>}/>
-                <Route path="/relatorios" element={<PrivateRoute><Relatorios /></PrivateRoute>}/>
-                <Route path="/configuracoes" element={<PrivateRoute><Configuracoes /></PrivateRoute>}/>
+                <Route path="/relatorios" element={<PrivateRoute adminOnly><Relatorios /></PrivateRoute>}/>
+                <Route path="/configuracoes" element={<PrivateRoute adminOnly><Configuracoes /></PrivateRoute>}/>
             </Routes>
         </BrowserRouter>
     );
