@@ -24,6 +24,11 @@ const fmt = (val) =>
 const fmtDate = (val) =>
     val ? new Date(val).toLocaleDateString('pt-BR') : '-';
 
+const fmtDateOnly = (dateStr) => {
+    const [y, m, d] = String(dateStr).split('-');
+    return `${d}/${m}/${y}`;
+};
+
 const fmtDateTime = (val) =>
     val ? new Date(val).toLocaleString('pt-BR') : '-';
 
@@ -152,7 +157,7 @@ const REPORT_CATEGORIES = [
             {
                 id: 'produtos-sem-movimento',
                 title: 'Sem Movimento',
-                desc: 'Produtos que não tiveram venda no período selecionado',
+                desc: 'Produtos sem nenhuma venda no período selecionado',
                 icon: '⚠️',
                 needsDates: true,
             },
@@ -247,6 +252,9 @@ function Relatorios() {
     const [vendas, setVendas] = useState([]);
     const [produtos, setProdutos] = useState([]);
     const [clientes, setClientes] = useState([]);
+    const [maisVendidos, setMaisVendidos] = useState([]);
+    const [semMovimento, setSemMovimento] = useState([]);
+    const [estoqueDetalhado, setEstoqueDetalhado] = useState([]);
 
     // Date filters
     const [dateStart, setDateStart] = useState(getDaysAgo(30));
@@ -259,26 +267,56 @@ function Relatorios() {
 
     const { showNotification } = useNotification();
 
-    // ─── Load data when report is selected ───
+    // Aplica filtros de texto (activeFilters) sobre um array de vendas para manter
+    // KPIs e gráficos consistentes com o que a tabela exibe.
+    function applyTextFilters(items) {
+        if (!activeFilters || !Object.keys(activeFilters).length) return items;
+        return items.filter(item =>
+            Object.entries(activeFilters).every(([key, val]) => {
+                if (!val || key.startsWith('_')) return true;
+                const v = item[key];
+                if (v == null) return false;
+                const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+                return norm(v).includes(norm(val));
+            })
+        );
+    }
+
+    // ─── Recarrega ao trocar relatório OU ao mudar período ───
     useEffect(() => {
         if (!activeReport) return;
         loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeReport]);
+    }, [activeReport, dateStart, dateEnd]);
 
     async function loadData() {
         setLoading(true);
         try {
-            const reportDef = findReport(activeReport);
             const promises = [];
-            const needsVendas = ['vendas-periodo', 'vendas-pagamento', 'vendas-vendedor', 'vendas-cliente',
-                'produtos-mais-vendidos', 'produtos-sem-movimento', 'resumo-financeiro'].includes(activeReport);
-            const needsProdutos = ['produtos-mais-vendidos', 'estoque-atual', 'produtos-sem-movimento'].includes(activeReport);
-            const needsClientes = ['cadastro-clientes', 'clientes-convenio', 'vendas-cliente'].includes(activeReport);
+            const q = `data_inicio=${dateStart}&data_fim=${dateEnd}`;
 
-            if (needsVendas) promises.push(api.get('/vendas').then(r => setVendas(r.data)).catch(() => setVendas([])));
-            if (needsProdutos) promises.push(api.get('/produtos?incluir_inativos=true').then(r => setProdutos(r.data)).catch(() => setProdutos([])));
-            if (needsClientes) promises.push(api.get('/clientes?incluir_inativos=true').then(r => setClientes(r.data)).catch(() => setClientes([])));
+            const needsVendas      = ['vendas-periodo','vendas-pagamento','vendas-vendedor',
+                                       'vendas-cliente','resumo-financeiro'].includes(activeReport);
+            const needsMaisVendidos = activeReport === 'produtos-mais-vendidos';
+            const needsSemMovimento = activeReport === 'produtos-sem-movimento';
+            const needsEstoque      = activeReport === 'estoque-atual';
+            const needsClientes     = ['cadastro-clientes','clientes-convenio','vendas-cliente'].includes(activeReport);
+
+            if (needsVendas)
+                promises.push(api.get(`/relatorio/vendas?${q}`)
+                    .then(r => setVendas(r.data)).catch(() => setVendas([])));
+            if (needsMaisVendidos)
+                promises.push(api.get(`/relatorio/mais-vendidos?${q}&limite=100`)
+                    .then(r => setMaisVendidos(r.data)).catch(() => setMaisVendidos([])));
+            if (needsSemMovimento)
+                promises.push(api.get(`/relatorio/sem-movimento?${q}`)
+                    .then(r => setSemMovimento(r.data)).catch(() => setSemMovimento([])));
+            if (needsEstoque)
+                promises.push(api.get('/relatorio/estoque')
+                    .then(r => setEstoqueDetalhado(r.data)).catch(() => setEstoqueDetalhado([])));
+            if (needsClientes)
+                promises.push(api.get('/clientes?incluir_inativos=true')
+                    .then(r => setClientes(r.data)).catch(() => setClientes([])));
 
             await Promise.all(promises);
         } catch (err) {
@@ -316,15 +354,12 @@ function Relatorios() {
         setActivePreset(preset.label);
     }
 
-    // ─── Filter vendas by date ───
+    // ─── Filter vendas by date (comparação de strings para evitar problema de timezone) ───
     const vendasFiltradas = useMemo(() => {
         if (!vendas.length) return [];
         return vendas.filter(v => {
-            const d = new Date(v.dataVenda);
-            const start = new Date(dateStart);
-            const end = new Date(dateEnd);
-            end.setHours(23, 59, 59, 999);
-            return d >= start && d <= end;
+            const d = (v.dataVenda || '').substring(0, 10);
+            return d >= dateStart && d <= dateEnd;
         });
     }, [vendas, dateStart, dateEnd]);
 
@@ -358,11 +393,14 @@ function Relatorios() {
                 return { columns: [], data: [], kpis: [], chartData: null };
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeReport, vendasFiltradas, produtos, clientes, dateStart, dateEnd]);
+    }, [activeReport, vendasFiltradas, produtos, clientes, maisVendidos, semMovimento, estoqueDetalhado, dateStart, dateEnd, activeFilters]);
 
     /* ─── 1. Vendas por Período ─── */
     function processVendasPeriodo() {
-        const data = vendasFiltradas.map(v => ({
+        // Aplica filtros avançados para manter KPIs e gráficos consistentes com a tabela
+        const vendasBase = applyTextFilters(vendasFiltradas);
+
+        const data = vendasBase.map(v => ({
             ...v,
             dataFormatada: fmtDateTime(v.dataVenda),
             valorFinalFmt: fmt(v.valorFinal),
@@ -371,12 +409,12 @@ function Relatorios() {
                 : (PAYMENT_LABELS[v.formaPagamento] || v.formaPagamento),
         }));
 
-        const totalReceita = vendasFiltradas.reduce((s, v) => s + (v.valorFinal || 0), 0);
-        const ticketMedio = vendasFiltradas.length ? totalReceita / vendasFiltradas.length : 0;
+        const totalReceita = vendasBase.reduce((s, v) => s + (v.valorFinal || 0), 0);
+        const ticketMedio = vendasBase.length ? totalReceita / vendasBase.length : 0;
 
         // Chart: vendas por dia
         const byDay = {};
-        vendasFiltradas.forEach(v => {
+        vendasBase.forEach(v => {
             const day = fmtDate(v.dataVenda);
             if (!byDay[day]) byDay[day] = { name: day, valor: 0, qtd: 0 };
             byDay[day].valor += v.valorFinal || 0;
@@ -400,7 +438,7 @@ function Relatorios() {
             data,
             kpis: [
                 { label: 'Total Vendas', value: fmt(totalReceita), accent: '#22c55e' },
-                { label: 'Qtd. Vendas', value: vendasFiltradas.length, accent: '#2563eb' },
+                { label: 'Qtd. Vendas', value: vendasBase.length, accent: '#2563eb' },
                 { label: 'Ticket Médio', value: fmt(ticketMedio), accent: '#8b5cf6' },
             ],
             chartData,
@@ -419,13 +457,14 @@ function Relatorios() {
     function processVendasPagamento() {
         const byPayment = {};
         vendasFiltradas.forEach(v => {
-            const formas = v.pagamentos?.length
-                ? v.pagamentos.map(p => p.formaPagamento)
-                : [v.formaPagamento || 'outro'];
-            formas.forEach(forma => {
+            const pagamentosVenda = v.pagamentos?.length
+                ? v.pagamentos
+                : [{ formaPagamento: v.formaPagamento || 'outro', valor: v.valorFinal || 0 }];
+            pagamentosVenda.forEach(p => {
+                const forma = p.formaPagamento;
                 if (!byPayment[forma]) byPayment[forma] = { formaPagamento: forma, label: PAYMENT_LABELS[forma] || forma, quantidade: 0, total: 0 };
                 byPayment[forma].quantidade += 1;
-                byPayment[forma].total += v.valorFinal || 0;
+                byPayment[forma].total += Number(p.valor) || 0;
             });
         });
         const data = Object.values(byPayment).sort((a, b) => b.total - a.total);
@@ -545,122 +584,114 @@ function Relatorios() {
 
     /* ─── 5. Produtos Mais Vendidos ─── */
     function processProdutosMaisVendidos() {
-        const byProduto = {};
-        vendasFiltradas.forEach(v => {
-            (v.itens || []).forEach(item => {
-                const id = item.idProduto || item.produtoNome;
-                if (!byProduto[id]) byProduto[id] = { produto: item.produtoNome, quantidade: 0, receita: 0 };
-                byProduto[id].quantidade += item.quantidade || 0;
-                byProduto[id].receita += item.subtotal || 0;
-            });
-        });
-        const data = Object.values(byProduto).sort((a, b) => b.quantidade - a.quantidade);
-        data.forEach((d, i) => {
-            d.ranking = i + 1;
-            d.precoMedio = d.quantidade ? d.receita / d.quantidade : 0;
-            d.receitaFmt = fmt(d.receita);
-            d.precoMedioFmt = fmt(d.precoMedio);
-        });
+        const data = maisVendidos.map((d, i) => ({
+            ...d,
+            ranking: i + 1,
+            produto: d.nome,
+            quantidade: d.totalVendido,
+            receita: d.receitaTotal,
+            receitaFmt: fmt(d.receitaTotal),
+            precoMedioFmt: fmt(d.precoMedio),
+        }));
 
-        const chartData = data.slice(0, 10).map(d => ({ name: d.produto, valor: d.receita }));
+        const chartData = data.slice(0, 10).map(d => ({ name: d.nome, valor: d.receitaTotal }));
+        const receitaGeral = data.reduce((s, d) => s + d.receitaTotal, 0);
 
         return {
             columns: [
                 { key: 'ranking', label: '#' },
-                { key: 'produto', label: 'Produto' },
-                { key: 'quantidade', label: 'Unid. Vendidas' },
-                { key: 'receita', label: 'Receita Total', render: v => <strong>{fmt(v)}</strong> },
+                { key: 'nome', label: 'Produto' },
+                { key: 'categoria', label: 'Categoria', render: v => v || '-' },
+                { key: 'totalVendido', label: 'Unid. Vendidas' },
+                { key: 'receitaTotal', label: 'Receita Total', render: v => <strong>{fmt(v)}</strong> },
                 { key: 'precoMedio', label: 'Preço Médio', render: v => fmt(v) },
             ],
             data,
             kpis: [
                 { label: 'Produtos Vendidos', value: data.length, accent: '#22c55e' },
-                { label: 'Mais Vendido', value: data[0]?.produto || '-', accent: '#2563eb' },
-                { label: 'Receita Total', value: fmt(data.reduce((s, d) => s + d.receita, 0)), accent: '#f59e0b' },
+                { label: 'Mais Vendido', value: data[0]?.nome || '-', accent: '#2563eb' },
+                { label: 'Receita Total', value: fmt(receitaGeral), accent: '#f59e0b' },
             ],
             chartData,
             chartType: 'bar',
-            searchKeys: ['produto'],
+            searchKeys: ['nome', 'categoria'],
             filterDefinitions: [],
-            exportColumns: ['#', 'Produto', 'Unid. Vendidas', 'Receita Total', 'Preço Médio'],
-            exportKeys: ['ranking', 'produto', 'quantidade', 'receitaFmt', 'precoMedioFmt'],
+            exportColumns: ['#', 'Produto', 'Categoria', 'Unid. Vendidas', 'Receita Total', 'Preço Médio'],
+            exportKeys: ['ranking', 'nome', 'categoria', 'totalVendido', 'receitaFmt', 'precoMedioFmt'],
         };
     }
 
     /* ─── 6. Estoque Atual ─── */
     function processEstoqueAtual() {
-        const data = produtos
-            .filter(p => p.ativo !== false && p.ativo !== 0)
-            .map(p => ({
-                ...p,
-                valorEstoque: (p.preco || 0) * (p.estoque || 0),
-                precoFmt: fmt(p.preco),
-                valorEstoqueFmt: fmt((p.preco || 0) * (p.estoque || 0)),
-                estoqueStatus: (p.estoque || 0) <= 0 ? 'Sem estoque'
-                    : (p.estoque || 0) < 10 ? 'Baixo' : 'Normal',
-            }));
+        const data = estoqueDetalhado.map(p => ({
+            ...p,
+            precoFmt: fmt(p.preco),
+            valorEstoqueFmt: fmt(p.valorEstoque || 0),
+            receitaTotalFmt: fmt(p.receitaTotal || 0),
+            ultimaVendaFmt: p.ultimaVenda ? fmtDate(p.ultimaVenda) : 'Nunca vendido',
+            statusLabel: (p.ativo === false || p.ativo === 0) ? 'Inativo' : 'Ativo',
+        }));
 
-        const totalValorEstoque = data.reduce((s, p) => s + p.valorEstoque, 0);
-        const semEstoque = data.filter(p => (p.estoque || 0) <= 0).length;
-        const estoqueBaixo = data.filter(p => (p.estoque || 0) > 0 && (p.estoque || 0) < 10).length;
+        const ativos = data.filter(p => p.ativo !== false && p.ativo !== 0);
+        const totalValorEstoque = ativos.reduce((s, p) => s + (p.valorEstoque || 0), 0);
+        const semEstoque   = ativos.filter(p => (p.estoque || 0) <= 0).length;
+        const estoqueBaixo = ativos.filter(p => (p.estoque || 0) > 0 && (p.estoque || 0) < 10).length;
+        const nuncaVendido = ativos.filter(p => !p.ultimaVenda).length;
 
         return {
             columns: [
                 { key: 'idProduto', label: 'ID' },
                 { key: 'nome', label: 'Produto' },
                 { key: 'categoria', label: 'Categoria', render: v => v || '-' },
-                { key: 'estoque', label: 'Estoque', render: (v) => (
-                    <span className={`badge ${(v || 0) <= 0 ? 'badge-danger' : (v || 0) < 10 ? 'badge-warning' : 'badge-success'}`}>
+                { key: 'estoque', label: 'Estoque', render: v => (
+                    <span className={`badge ${(v||0)<=0 ? 'badge-danger' : (v||0)<10 ? 'badge-warning' : 'badge-success'}`}>
                         {v || 0}
                     </span>
                 )},
                 { key: 'preco', label: 'Preço Unit.', render: v => fmt(v) },
-                { key: 'valorEstoque', label: 'Valor em Estoque', render: v => <strong>{fmt(v)}</strong> },
+                { key: 'valorEstoque', label: 'Valor Estoque', render: v => <strong>{fmt(v||0)}</strong> },
+                { key: 'totalVendido', label: 'Total Vendido' },
+                { key: 'receitaTotal', label: 'Receita Gerada', render: v => fmt(v||0) },
+                { key: 'ultimaVendaFmt', label: 'Última Venda' },
+                { key: 'statusLabel', label: 'Status', render: v => (
+                    <span className={`badge ${v === 'Ativo' ? 'badge-success' : 'badge-danger'}`}>{v}</span>
+                )},
             ],
             data,
             kpis: [
-                { label: 'Total Produtos', value: data.length, accent: '#2563eb' },
+                { label: 'Produtos Ativos', value: ativos.length, accent: '#2563eb' },
                 { label: 'Valor em Estoque', value: fmt(totalValorEstoque), accent: '#22c55e' },
                 { label: 'Sem Estoque', value: semEstoque, accent: '#dc2626' },
                 { label: 'Estoque Baixo', value: estoqueBaixo, accent: '#f59e0b' },
+                { label: 'Nunca Vendidos', value: nuncaVendido, accent: '#8b5cf6' },
             ],
             chartData: null,
             searchKeys: ['nome', 'categoria'],
             filterDefinitions: [
                 {
-                    key: '_estoqueStatus', label: 'Status Estoque', type: 'select',
+                    key: 'statusLabel', label: 'Status', type: 'select',
                     options: [
                         { value: '', label: 'Todos' },
-                        { value: 'negativo', label: 'Sem Estoque' },
-                        { value: 'zero', label: 'Zerado' },
-                        { value: 'positivo', label: 'Com Estoque' },
+                        { value: 'Ativo', label: 'Ativos' },
+                        { value: 'Inativo', label: 'Inativos' },
                     ]
                 },
             ],
-            exportColumns: ['ID', 'Produto', 'Categoria', 'Estoque', 'Preço Unit.', 'Valor em Estoque'],
-            exportKeys: ['idProduto', 'nome', 'categoria', 'estoque', 'precoFmt', 'valorEstoqueFmt'],
+            exportColumns: ['ID', 'Produto', 'Categoria', 'Estoque', 'Preço Unit.', 'Valor Estoque', 'Total Vendido', 'Receita Gerada', 'Última Venda', 'Status'],
+            exportKeys: ['idProduto', 'nome', 'categoria', 'estoque', 'precoFmt', 'valorEstoqueFmt', 'totalVendido', 'receitaTotalFmt', 'ultimaVendaFmt', 'statusLabel'],
         };
     }
 
     /* ─── 7. Produtos Sem Movimento ─── */
     function processProdutosSemMovimento() {
-        const produtosVendidos = new Set();
-        vendasFiltradas.forEach(v => {
-            (v.itens || []).forEach(item => {
-                if (item.idProduto) produtosVendidos.add(item.idProduto);
-            });
-        });
+        const data = semMovimento.map(p => ({
+            ...p,
+            precoFmt: fmt(p.preco),
+            valorEstoqueFmt: fmt(p.valorEstoque || 0),
+            dataCadastroFmt: p.dataCadastro ? fmtDateOnly(p.dataCadastro) : '-',
+        }));
 
-        const data = produtos
-            .filter(p => (p.ativo !== false && p.ativo !== 0) && !produtosVendidos.has(p.idProduto))
-            .map(p => ({
-                ...p,
-                valorEstoque: (p.preco || 0) * (p.estoque || 0),
-                precoFmt: fmt(p.preco),
-                valorEstoqueFmt: fmt((p.preco || 0) * (p.estoque || 0)),
-            }));
-
-        const totalParado = data.reduce((s, p) => s + p.valorEstoque, 0);
+        const totalParado = data.reduce((s, p) => s + (p.valorEstoque || 0), 0);
 
         return {
             columns: [
@@ -669,19 +700,21 @@ function Relatorios() {
                 { key: 'categoria', label: 'Categoria', render: v => v || '-' },
                 { key: 'estoque', label: 'Estoque' },
                 { key: 'preco', label: 'Preço', render: v => fmt(v) },
-                { key: 'valorEstoque', label: 'Valor Parado', render: v => <strong style={{ color: '#dc2626' }}>{fmt(v)}</strong> },
+                { key: 'valorEstoque', label: 'Valor Parado', render: v => <strong style={{ color: '#dc2626' }}>{fmt(v||0)}</strong> },
+                { key: 'dataCadastroFmt', label: 'Cadastrado em' },
             ],
             data,
             kpis: [
                 { label: 'Produtos Parados', value: data.length, accent: '#dc2626' },
                 { label: 'Capital Parado', value: fmt(totalParado), accent: '#f59e0b' },
-                { label: 'Total Produtos', value: produtos.filter(p => p.ativo !== false && p.ativo !== 0).length, accent: '#2563eb' },
+                { label: 'Período Analisado', value: '12 meses', accent: '#64748b' },
             ],
+            infoMessage: `Produtos sem vendas de ${fmtDateOnly(dateStart)} até ${fmtDateOnly(dateEnd)}`,
             chartData: null,
             searchKeys: ['nome', 'categoria'],
             filterDefinitions: [],
-            exportColumns: ['ID', 'Produto', 'Categoria', 'Estoque', 'Preço', 'Valor Parado'],
-            exportKeys: ['idProduto', 'nome', 'categoria', 'estoque', 'precoFmt', 'valorEstoqueFmt'],
+            exportColumns: ['ID', 'Produto', 'Categoria', 'Estoque', 'Preço', 'Valor Parado', 'Cadastrado em'],
+            exportKeys: ['idProduto', 'nome', 'categoria', 'estoque', 'precoFmt', 'valorEstoqueFmt', 'dataCadastroFmt'],
         };
     }
 
@@ -876,7 +909,7 @@ function Relatorios() {
         doc.setTextColor(148, 163, 184); // #94a3b8
         const needsDates = findReport(activeReport)?.needsDates;
         if (needsDates) {
-            doc.text(`Período: ${fmtDate(dateStart + 'T00:00:00')} a ${fmtDate(dateEnd + 'T00:00:00')}`, 14, 28);
+            doc.text(`Período: ${fmtDateOnly(dateStart)} a ${fmtDateOnly(dateEnd)}`, 14, 28);
         }
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, needsDates ? 34 : 28);
 
@@ -1081,6 +1114,16 @@ function Relatorios() {
                                                 <span className="rel-kpi-value">{kpi.value}</span>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+
+                                {/* Info message (ex: período fixo do sem-movimento) */}
+                                {reportData.infoMessage && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', color: '#1d4ed8', marginBottom: '4px' }}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ flexShrink: 0 }}>
+                                            <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                                        </svg>
+                                        {reportData.infoMessage}
                                     </div>
                                 )}
 
