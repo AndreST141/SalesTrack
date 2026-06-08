@@ -112,7 +112,7 @@ docker compose exec backend python scripts/gerar_vendas.py --quantidade 50 --dat
 |--------|-------|-------|
 | Administrador | admin@salestrack.com | admin123 |
 | Vendedor | vendedor@salestrack.com | vendedor123 |
-| Tecnico | tecnico| 20260607 |
+| Tecnico | tecnico| anoMesDia |
 
 # ⚙️Execução Manual sem Docker
 
