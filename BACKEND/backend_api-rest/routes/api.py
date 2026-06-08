@@ -1,7 +1,8 @@
 from flask import Blueprint
 from app.Http.Controllers.controllers import (
     AuthController, ProdutoController, ClienteController,
-    VendaController, CategoriaController, DashboardController
+    VendaController, CategoriaController, DashboardController,
+    UserController, RelatorioController,
 )
 from middlewares.auth_middleware import token_required
 
@@ -36,9 +37,10 @@ cliente_bp.route('/api/clientes/<int:id>', methods=['DELETE'])(token_required(Cl
 # Vendas
 # =============================================
 venda_bp = Blueprint('vendas', __name__)
-venda_bp.route('/api/vendas',          methods=['GET'] )(token_required(VendaController.index))
-venda_bp.route('/api/vendas/<int:id>', methods=['GET'] )(token_required(VendaController.show))
-venda_bp.route('/api/vendas',          methods=['POST'])(token_required(VendaController.store))
+venda_bp.route('/api/vendas',                     methods=['GET'] )(token_required(VendaController.index))
+venda_bp.route('/api/vendas/<int:id>',            methods=['GET'] )(token_required(VendaController.show))
+venda_bp.route('/api/vendas',                     methods=['POST'])(token_required(VendaController.store))
+venda_bp.route('/api/vendas/<int:id>/cancelar',   methods=['PATCH'])(token_required(VendaController.cancel))
 
 # =============================================
 # Categorias
@@ -53,3 +55,19 @@ dashboard_bp = Blueprint('dashboard', __name__)
 dashboard_bp.route('/api/dashboard/kpis',                   methods=['GET'])(token_required(DashboardController.kpis))
 dashboard_bp.route('/api/dashboard/vendas-periodo',         methods=['GET'])(token_required(DashboardController.vendas_periodo))
 dashboard_bp.route('/api/dashboard/produtos-mais-vendidos', methods=['GET'])(token_required(DashboardController.produtos_mais_vendidos))
+
+# =============================================
+# Usuários
+# =============================================
+usuario_bp = Blueprint('usuarios', __name__)
+usuario_bp.route('/api/usuarios',          methods=['GET'] )(token_required(UserController.index))
+usuario_bp.route('/api/usuarios',          methods=['POST'])(token_required(UserController.store))
+
+# =============================================
+# Relatórios
+# =============================================
+relatorio_bp = Blueprint('relatorios', __name__)
+relatorio_bp.route('/api/relatorio/vendas',                methods=['GET'])(token_required(RelatorioController.vendas_periodo))
+relatorio_bp.route('/api/relatorio/mais-vendidos',         methods=['GET'])(token_required(RelatorioController.produtos_mais_vendidos))
+relatorio_bp.route('/api/relatorio/sem-movimento',         methods=['GET'])(token_required(RelatorioController.produtos_sem_movimento))
+relatorio_bp.route('/api/relatorio/estoque',               methods=['GET'])(token_required(RelatorioController.estoque_detalhado))

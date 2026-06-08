@@ -3,7 +3,9 @@ from app.Services.auth_service import AuthService
 from app.Services.produto_service import ProdutoService
 from app.Services.cliente_service import ClienteService
 from app.Services.venda_service import VendaService
+from app.Services.user_service import UserService
 from app.Services.categoria_service import CategoriaService, DashboardService
+from app.Services.relatorio_service import RelatorioService
 
 
 # =============================================
@@ -106,6 +108,19 @@ class VendaController:
         result = VendaService.create(request.json or {}, request.user['id'])
         return jsonify({'success': True, 'id': result.get('id')}), result['status']
 
+    @staticmethod
+    def cancel(id):
+        data = request.json or {}
+        result = VendaService.cancel(
+            id,
+            request.user['tipo'],
+            request.user['nome'],
+            data.get('admin_senha'),
+        )
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'success': True, 'message': result['message']}), 200
+
 
 # =============================================
 # CategoriaController
@@ -144,3 +159,62 @@ class DashboardController:
         limite = int(request.args.get('limite', '10'))
         result = DashboardService.get_produtos_mais_vendidos(limite)
         return jsonify(result['produtos']), 200
+
+
+# =============================================
+# UserController
+# =============================================
+class UserController:
+
+    ADMIN_TIPOS = {'admin', 'tecnico'}
+
+    @staticmethod
+    def index():
+        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = UserService.list()
+        return jsonify(result['usuarios']), result['status']
+
+    @staticmethod
+    def store():
+        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = UserService.create(request.json or {})
+        if result['status'] not in (200, 201):
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'success': True, 'id': result.get('id')}), result['status']
+
+
+# =============================================
+# RelatorioController
+# =============================================
+class RelatorioController:
+
+    @staticmethod
+    def vendas_periodo():
+        data_inicio = request.args.get('data_inicio', '')
+        data_fim    = request.args.get('data_fim', '')
+        if not data_inicio or not data_fim:
+            return jsonify({'error': 'Informe data_inicio e data_fim'}), 400
+        result = RelatorioService.get_vendas_periodo(data_inicio, data_fim)
+        return jsonify(result['vendas']), result['status']
+
+    @staticmethod
+    def produtos_mais_vendidos():
+        data_inicio = request.args.get('data_inicio', '')
+        data_fim    = request.args.get('data_fim', '')
+        limite      = request.args.get('limite', 100)
+        if not data_inicio or not data_fim:
+            return jsonify({'error': 'Informe data_inicio e data_fim'}), 400
+        result = RelatorioService.get_produtos_mais_vendidos(data_inicio, data_fim, limite)
+        return jsonify(result['produtos']), result['status']
+
+    @staticmethod
+    def produtos_sem_movimento():
+        result = RelatorioService.get_produtos_sem_movimento()
+        return jsonify(result['produtos']), result['status']
+
+    @staticmethod
+    def estoque_detalhado():
+        result = RelatorioService.get_estoque_detalhado()
+        return jsonify(result['produtos']), result['status']
