@@ -141,3 +141,39 @@ class VendaRepository:
             cursor.close()
             conn.close()
             raise e
+
+    @staticmethod
+    def cancel(id, cancelado_por=None, autorizado_por=None):
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT idVenda, status FROM Venda WHERE idVenda = %s", (id,))
+            venda = cursor.fetchone()
+            if not venda:
+                return None
+            if venda['status'] == 'cancelada':
+                return 'already_cancelled'
+
+            cursor.execute(
+                "SELECT idProduto, quantidade FROM ItemVenda WHERE idVenda = %s", (id,)
+            )
+            itens = cursor.fetchall()
+
+            for item in itens:
+                cursor.execute(
+                    "UPDATE Produto SET estoque = estoque + %s WHERE idProduto = %s",
+                    (item['quantidade'], item['idProduto'])
+                )
+
+            cursor.execute(
+                "UPDATE Venda SET status = 'cancelada', canceladoPor = %s, autorizadoPor = %s WHERE idVenda = %s",
+                (cancelado_por, autorizado_por, id)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+            conn.close()

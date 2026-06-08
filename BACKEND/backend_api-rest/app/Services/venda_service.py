@@ -1,4 +1,5 @@
 from app.Repositories.venda_repository import VendaRepository
+from app.Repositories.auth_repository import AuthRepository
 from app.Constants.geral import Geral
 
 class VendaService:
@@ -62,3 +63,27 @@ class VendaService:
             return {'status': 201, 'message': Geral.VENDA_CADASTRADA, 'id': venda_id}
         except Exception as e:
             return {'status': 500, 'error': Geral.ERRO_CRIAR_VENDA}
+
+    @staticmethod
+    def cancel(id, usuario_tipo, usuario_nome, admin_senha=None):
+        tipos_permitidos = {'admin', 'supervisor', 'tecnico'}
+        cancelado_por  = usuario_nome   # sempre quem está logado
+        autorizado_por = None           # preenchido apenas quando vendedor usa senha
+
+        if usuario_tipo not in tipos_permitidos:
+            if not admin_senha:
+                return {'status': 403, 'error': Geral.SEM_PERMISSAO}
+            autorizador = AuthRepository.verify_admin_or_supervisor_password(admin_senha)
+            if not autorizador:
+                return {'status': 422, 'error': Geral.SENHA_ADMIN_INVALIDA}
+            autorizado_por = autorizador['nome']
+
+        try:
+            result = VendaRepository.cancel(id, cancelado_por, autorizado_por)
+            if result is None:
+                return {'status': 404, 'error': Geral.VENDA_NAO_ENCONTRADA}
+            if result == 'already_cancelled':
+                return {'status': 400, 'error': Geral.VENDA_JA_CANCELADA}
+            return {'status': 200, 'message': Geral.VENDA_CANCELADA}
+        except Exception:
+            return {'status': 500, 'error': Geral.ERRO_SERVIDOR}

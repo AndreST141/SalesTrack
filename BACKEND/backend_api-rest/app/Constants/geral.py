@@ -28,6 +28,18 @@ class Geral:
     VENDA_NAO_ENCONTRADA    = "Venda não encontrada."
     ERRO_CRIAR_VENDA        = "Erro ao registrar a venda."
 
+    # Cancelamento de venda
+    VENDA_CANCELADA         = "Venda cancelada e estoque restaurado com sucesso."
+    VENDA_JA_CANCELADA      = "Esta venda já está cancelada."
+    SEM_PERMISSAO           = "Acesso não autorizado. Apenas administradores podem realizar esta ação."
+
+    # Usuário
+    USUARIO_CADASTRADO      = "Usuário cadastrado com sucesso."
+    USUARIO_NAO_ENCONTRADO  = "Usuário não encontrado."
+    USUARIO_JA_EXISTE       = "Já existe um usuário com este e-mail."
+    TIPO_INVALIDO           = "Perfil inválido. Use: admin, supervisor ou vendedor."
+    SENHA_ADMIN_INVALIDA    = "Credenciais de administrador inválidas."
+
     # Erros gerais
     ERRO_SERVIDOR           = "Erro interno no servidor."
     ERRO_CONEXAO            = "Erro ao conectar ao banco de dados."

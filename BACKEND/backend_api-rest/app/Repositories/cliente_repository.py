@@ -18,14 +18,15 @@ class ClienteRepository:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO Cliente (nome, cpf, telefone, email, endereco)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO Cliente (nome, cpf, telefone, email, endereco, observacoes)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             dados['nome'],
             dados.get('cpf'),
             dados.get('telefone'),
             dados.get('email'),
-            dados.get('endereco')
+            dados.get('endereco'),
+            dados.get('observacoes'),
         ))
         conn.commit()
         cliente_id = cursor.lastrowid
@@ -39,7 +40,8 @@ class ClienteRepository:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE Cliente
-            SET nome = %s, cpf = %s, telefone = %s, email = %s, endereco = %s
+            SET nome = %s, cpf = %s, telefone = %s, email = %s,
+                endereco = %s, observacoes = %s
             WHERE idCliente = %s
         """, (
             dados['nome'],
@@ -47,7 +49,8 @@ class ClienteRepository:
             dados.get('telefone'),
             dados.get('email'),
             dados.get('endereco'),
-            id
+            dados.get('observacoes'),
+            id,
         ))
         conn.commit()
         cursor.close()

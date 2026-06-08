@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from routes.api import auth_bp, produto_bp, cliente_bp, venda_bp, categoria_bp, dashboard_bp
+from routes.api import auth_bp, produto_bp, cliente_bp, venda_bp, categoria_bp, dashboard_bp, usuario_bp, relatorio_bp
 
 app = Flask(__name__)
 
@@ -34,6 +34,8 @@ app.register_blueprint(cliente_bp)
 app.register_blueprint(venda_bp)
 app.register_blueprint(categoria_bp)
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(usuario_bp)
+app.register_blueprint(relatorio_bp)
 
 if __name__ == '__main__':
     print("\n" + "="*60)
