@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Sidebar from '../../components/SideBar/sidebar';
+import Modal from '../../components/Modal/Modal';
 import { useConfig } from '../../contexts/ConfigContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import api from '../../services/api';
 import StorageService from '../../services/storageService';
 import './style.css';
 
@@ -38,6 +40,9 @@ function mascaraCEP(value) {
     return nums;
 }
 
+const TIPO_LABELS = { admin: 'Administrador', supervisor: 'Supervisor', vendedor: 'Vendedor' };
+const TIPO_BADGE  = { admin: 'badge-info', supervisor: 'badge-warning', vendedor: 'badge-success' };
+
 // ─── Component ─────────────────────────────────────────────────────
 
 function Configuracoes() {
@@ -56,6 +61,21 @@ function Configuracoes() {
     const cepAbortRef = useRef(null);
     const cepTimerRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // ── Gerenciamento de Usuários ──────────────────────────────
+    const [modalUsuarios, setModalUsuarios] = useState(false);
+    const [usuarios, setUsuarios] = useState([]);
+    const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+    const [viewCriar, setViewCriar] = useState(false);
+    const [novoUsuario, setNovoUsuario] = useState({ nome: '', email: '', senha: '', tipo: 'vendedor' });
+    const [errosCriar, setErrosCriar] = useState({});
+    const [criando, setCriando] = useState(false);
+
+    const [viewEditar, setViewEditar] = useState(false);
+    const [usuarioEditando, setUsuarioEditando] = useState(null);
+    const [errosEditar, setErrosEditar] = useState({});
+    const [editando, setEditando] = useState(false);
+    const [usuarioParaExcluir, setUsuarioParaExcluir] = useState(null);
 
     // Sync from context when it changes (e.g. after import)
     useEffect(() => { setEmpresa(dadosEmpresa); }, [dadosEmpresa]);
@@ -194,6 +214,119 @@ function Configuracoes() {
         e.target.value = '';
     };
 
+    // ── Usuários ───────────────────────────────────────────────
+    async function carregarUsuarios() {
+        setLoadingUsuarios(true);
+        try {
+            const res = await api.get('/usuarios');
+            setUsuarios(res.data);
+        } catch {
+            showNotification('Erro ao carregar usuários.', 'error');
+        } finally {
+            setLoadingUsuarios(false);
+        }
+    }
+
+    function abrirModalUsuarios() {
+        setViewCriar(false);
+        setViewEditar(false);
+        setNovoUsuario({ nome: '', email: '', senha: '', tipo: 'vendedor' });
+        setErrosCriar({});
+        setModalUsuarios(true);
+        carregarUsuarios();
+    }
+
+    function abrirEditar(usuario) {
+        setUsuarioEditando({ ...usuario, senha: '' });
+        setErrosEditar({});
+        setViewEditar(true);
+        setViewCriar(false);
+    }
+
+    function handleEditarChange(field, value) {
+        setUsuarioEditando(prev => ({ ...prev, [field]: value }));
+        if (errosEditar[field]) setErrosEditar(prev => ({ ...prev, [field]: null }));
+    }
+
+    async function salvarEdicao() {
+        const e = {};
+        if (!usuarioEditando.nome.trim()) e.nome = 'Campo obrigatório';
+        if (!usuarioEditando.tipo) e.tipo = 'Selecione um perfil';
+        if (usuarioEditando.senha && usuarioEditando.senha.length < 4) e.senha = 'Mínimo 4 caracteres';
+
+        if (Object.keys(e).length > 0) { setErrosEditar(e); return; }
+
+        setEditando(true);
+        try {
+            await api.put(`/usuarios/${usuarioEditando.idUsuario}`, {
+                nome: usuarioEditando.nome,
+                tipo: usuarioEditando.tipo,
+                senha: usuarioEditando.senha || undefined,
+            });
+            showNotification('Usuário atualizado com sucesso!', 'success');
+            setViewEditar(false);
+            setUsuarioEditando(null);
+            carregarUsuarios();
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao atualizar usuário.', 'error');
+        } finally {
+            setEditando(false);
+        }
+    }
+
+    async function confirmarExclusao() {
+        if (!usuarioParaExcluir) return;
+        try {
+            await api.delete(`/usuarios/${usuarioParaExcluir.idUsuario}`);
+            showNotification('Usuário inativado com sucesso!', 'success');
+            setUsuarioParaExcluir(null);
+            carregarUsuarios();
+        } catch {
+            showNotification('Erro ao inativar usuário.', 'error');
+        }
+    }
+
+    function handleNovoUsuarioChange(field, value) {
+        setNovoUsuario(prev => ({ ...prev, [field]: value }));
+        if (errosCriar[field]) setErrosCriar(prev => ({ ...prev, [field]: null }));
+    }
+
+    async function criarUsuario() {
+        const e = {};
+        if (!novoUsuario.nome.trim())  e.nome  = 'Campo obrigatório';
+        if (!novoUsuario.email.trim()) e.email = 'Campo obrigatório';
+        if (!novoUsuario.senha.trim() || novoUsuario.senha.length < 4) e.senha = 'Mínimo 4 caracteres';
+        if (!novoUsuario.tipo)         e.tipo  = 'Selecione um perfil';
+
+        if (Object.keys(e).length > 0) {
+            setErrosCriar(e);
+            return;
+        }
+
+        setCriando(true);
+        try {
+            await api.post('/usuarios', novoUsuario);
+            showNotification('Usuário cadastrado com sucesso!', 'success');
+            setViewCriar(false);
+            setNovoUsuario({ nome: '', email: '', senha: '', tipo: 'vendedor' });
+            setErrosCriar({});
+            carregarUsuarios();
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Erro ao cadastrar usuário.';
+            showNotification(msg, 'error');
+        } finally {
+            setCriando(false);
+        }
+    }
+
+    // ── Computed: status do formulário de empresa ──────────────
+    const cnpjValido = empresa.cadastro.cnpj && validarCNPJ(empresa.cadastro.cnpj);
+    const empresaCompleto =
+        empresa.cadastro.razaoSocial?.trim().length >= 3 &&
+        empresa.cadastro.nomeFantasia?.trim().length >= 2 &&
+        !!cnpjValido &&
+        !!empresa.cadastro.inscricaoEstadual?.trim();
+
     // ── Render ──────────────────────────────────────────────────
     return (
         <div className="body-configuracoes">
@@ -217,16 +350,26 @@ function Configuracoes() {
                                 <h2>Dados da Empresa</h2>
                                 <p>Informações cadastrais do estabelecimento</p>
                             </div>
+                            <span className={`config-card-status ${empresaCompleto ? 'config-card-status--ok' : 'config-card-status--inc'}`}>
+                                {empresaCompleto ? '✓ Completo' : 'Incompleto'}
+                            </span>
                         </div>
                         <div className="config-card-body">
-                            {/* Cadastro */}
+                            {/* Seção: Cadastro Fiscal */}
+                            <div className="config-section-label">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                                    <path d="M16 2v4M8 2v4M3 10h18" />
+                                </svg>
+                                Cadastro Fiscal
+                            </div>
                             <div className="config-row">
                                 <div className="config-field">
                                     <label>Razão Social <span className="required">*</span></label>
                                     <input type="text" placeholder="Razão Social da Empresa"
                                         value={empresa.cadastro.razaoSocial}
                                         onChange={e => handleCadastro('razaoSocial', e.target.value)}
-                                        className={erros.razaoSocial ? 'input-error' : ''}
+                                        className={erros.razaoSocial ? 'input-error' : (empresa.cadastro.razaoSocial?.trim().length >= 3 ? 'input-valid' : '')}
                                     />
                                     {erros.razaoSocial && <span className="field-error">{erros.razaoSocial}</span>}
                                 </div>
@@ -235,7 +378,7 @@ function Configuracoes() {
                                     <input type="text" placeholder="Nome Fantasia"
                                         value={empresa.cadastro.nomeFantasia}
                                         onChange={e => handleCadastro('nomeFantasia', e.target.value)}
-                                        className={erros.nomeFantasia ? 'input-error' : ''}
+                                        className={erros.nomeFantasia ? 'input-error' : (empresa.cadastro.nomeFantasia?.trim().length >= 2 ? 'input-valid' : '')}
                                     />
                                     {erros.nomeFantasia && <span className="field-error">{erros.nomeFantasia}</span>}
                                 </div>
@@ -246,24 +389,27 @@ function Configuracoes() {
                                     <input type="text" placeholder="00.000.000/0000-00"
                                         value={empresa.cadastro.cnpj}
                                         onChange={e => handleCadastro('cnpj', e.target.value)}
-                                        className={erros.cnpj ? 'input-error' : ''}
+                                        className={erros.cnpj ? 'input-error' : (cnpjValido ? 'input-valid' : '')}
                                     />
                                     {erros.cnpj && <span className="field-error">{erros.cnpj}</span>}
+                                    {cnpjValido && !erros.cnpj && (
+                                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 500, marginTop: '3px', display: 'block' }}>✓ CNPJ válido</span>
+                                    )}
                                 </div>
                                 <div className="config-field">
                                     <label>Inscrição Estadual <span className="required">*</span></label>
                                     <input type="text" placeholder="000.000.000.000"
                                         value={empresa.cadastro.inscricaoEstadual}
                                         onChange={e => handleCadastro('inscricaoEstadual', e.target.value)}
-                                        className={erros.inscricaoEstadual ? 'input-error' : ''}
+                                        className={erros.inscricaoEstadual ? 'input-error' : (empresa.cadastro.inscricaoEstadual?.trim() ? 'input-valid' : '')}
                                     />
                                     {erros.inscricaoEstadual && <span className="field-error">{erros.inscricaoEstadual}</span>}
                                 </div>
                             </div>
 
-                            {/* Divisor */}
+                            {/* Seção: Endereço Fiscal */}
                             <div className="config-divider">
-                                <span>Endereço</span>
+                                <span>Endereço Fiscal</span>
                             </div>
 
                             {/* Endereço */}
@@ -298,7 +444,6 @@ function Configuracoes() {
                                 <input type="text" placeholder="Rua, Avenida..."
                                     value={empresa.endereco.logradouro}
                                     onChange={e => handleEndereco('logradouro', e.target.value)}
-                                    readOnly={!!empresa.endereco.cidade}
                                 />
                             </div>
                             <div className="config-row config-row--3col">
@@ -307,7 +452,6 @@ function Configuracoes() {
                                     <input type="text" placeholder="Bairro"
                                         value={empresa.endereco.bairro}
                                         onChange={e => handleEndereco('bairro', e.target.value)}
-                                        readOnly={!!empresa.endereco.cidade}
                                     />
                                 </div>
                                 <div className="config-field">
