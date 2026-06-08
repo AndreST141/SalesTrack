@@ -552,7 +552,7 @@
     cursor: not-allowed;
 }
 
-/* ── Payment Modal ────────────────────────────────────────────────── */
+/* ── Payment Modal ────────────────────────────────────────────── */
 .pagamento-modal-section {
     display: flex;
     flex-direction: column;
@@ -571,13 +571,14 @@
 .pagamento-total-row {
     display: flex;
     justify-content: space-between;
-    font-size: 14px;
+    align-items: baseline;
+    font-size: 13px;
     color: #64748b;
     font-weight: 500;
 }
 
 .pagamento-total-row .pagamento-total-value {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 800;
     color: #0f172a;
 }
@@ -598,6 +599,7 @@
     color: #d97706;
 }
 
+/* ── Label padrão do modal ──────────────────────────────────── */
 .pagamento-modal-label {
     font-size: 12px;
     font-weight: 600;
@@ -606,6 +608,7 @@
     letter-spacing: 0.5px;
 }
 
+/* ── Grid de formas de pagamento ────────────────────────────── */
 .pagamento-modal-grid {
     display: flex;
     flex-direction: column;
@@ -616,7 +619,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 11px 14px;
     border: 2px solid #e2e8f0;
     border-radius: 10px;
     background: #fff;
@@ -641,7 +644,7 @@
 }
 
 .pagamento-modal-grid .pagamento-modal-option .pagamento-modal-icon {
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .pagamento-modal-grid .pagamento-modal-option .pagamento-modal-option-label {
@@ -663,7 +666,7 @@
     color: #64748b;
 }
 
-/* ── Payment Value Input Row ────────────────────────────────────────── */
+/* ── Campo valor + botões ───────────────────────────────────── */
 .pagamento-valor-input-row {
     display: flex;
     align-items: center;
@@ -750,55 +753,65 @@
     cursor: not-allowed;
 }
 
-/* ── Payment Entries List (modal) ────────────────────────────────────── */
-.pagamento-entries-list {
+/* ── Chips de pagamentos adicionados ────────────────────────── */
+.pagamento-chips-wrapper {
     display: flex;
     flex-direction: column;
+    gap: 8px;
+}
+
+.pagamento-chips {
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
-    margin-top: 4px;
 }
 
-.pagamento-entries-list label {
-    font-size: 12px;
+.pagamento-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 20px;
+    padding: 5px 8px 5px 12px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.pagamento-chip .chip-label {
+    color: #1e40af;
     font-weight: 600;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    white-space: nowrap;
 }
 
-.pagamento-entry-modal {
+.pagamento-chip .chip-valor {
+    color: #1d4ed8;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pagamento-chip .chip-remove {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: #f8fafc;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #475569;
-    font-weight: 500;
-}
-
-.pagamento-entry-modal .pagamento-entry-modal-valor {
-    margin-left: auto;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.pagamento-entry-modal button {
-    background: none;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: #bfdbfe;
     border: none;
-    color: #dc2626;
-    font-size: 16px;
+    border-radius: 50%;
+    color: #1e40af;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 0;
     line-height: 1;
-    opacity: 0.7;
-    transition: opacity 0.15s;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
 }
 
-.pagamento-entry-modal button:hover {
-    opacity: 1;
+.pagamento-chip .chip-remove:hover {
+    background: #dc2626;
+    color: #fff;
 }
 
 /* ── Split Payment Summary (right panel) ────────────────────────────── */

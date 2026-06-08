@@ -291,20 +291,22 @@ function Vendas() {
         setBuscaConvenio('');
     }
 
-    async function finalizarVenda() {
+    const finalizarVenda = useCallback(async (extraPagamentos = []) => {
+        const todosPagamentos = [...pagamentos, ...extraPagamentos];
+
         if (itensVenda.length === 0) {
             showNotification('Adicione pelo menos um produto', 'warning');
             return;
         }
 
-        if (pagamentos.length === 0) {
+        if (todosPagamentos.length === 0) {
             showNotification('Selecione ao menos uma forma de pagamento', 'warning');
             setModalPagamento(true);
             return;
         }
 
-        const totalPagoAtual = pagamentos.reduce((sum, p) => sum + p.valor, 0);
-        const temDinheiro = pagamentos.some(p => p.forma === 'dinheiro');
+        const totalPagoAtual = todosPagamentos.reduce((sum, p) => sum + p.valor, 0);
+        const temDinheiro = todosPagamentos.some(p => p.forma === 'dinheiro');
 
         if (totalPagoAtual < total - 0.01) {
             showNotification(`O total pago (${fmt(totalPagoAtual)}) é menor que o total da venda (${fmt(total)})`, 'warning');
@@ -324,9 +326,10 @@ function Vendas() {
                 idCliente: clienteId || null,
                 valorTotal: subtotal,
                 desconto: descontoValor,
+                acrescimo: acrescimoValor,
                 valorFinal: total,
-                formaPagamento: pagamentos[0]?.forma || 'dinheiro',
-                pagamentos,
+                formaPagamento: todosPagamentos[0]?.forma || 'dinheiro',
+                pagamentos: todosPagamentos,
                 observacoes: cpfNota ? `CPF: ${cpfNota}` : '',
                 itens: itensVenda,
             };
@@ -334,16 +337,13 @@ function Vendas() {
             await api.post('/vendas', venda);
             showNotification('Venda finalizada com sucesso!', 'success');
 
-            // Lógica de Troco
-            const totalPagoDinheiro = pagamentos
+            const totalPagoDinheiro = todosPagamentos
                 .filter(p => p.forma === 'dinheiro')
                 .reduce((sum, p) => sum + p.valor, 0);
-            
-            // Se o total pago em dinheiro + outras formas for maior que o total da venda, há troco
+
             if (totalPagoAtual > total && totalPagoDinheiro > 0) {
                 setValorTroco(totalPagoAtual - total);
                 setModalTroco(true);
-                // Fecha automaticamente após 5 segundos
                 setTimeout(() => setModalTroco(false), 5000);
             }
 
@@ -369,22 +369,48 @@ function Vendas() {
         } finally {
             setFinalizando(false);
         }
-    }
+    }, [itensVenda, pagamentos, total, subtotal, descontoValor, acrescimoValor, clienteId, cpfNota, formasPagamento, showNotification]);
 
     const selectPaymentMethod = useCallback((value, index) => {
         setPagamentoForma(value);
         setPagamentoIndex(index);
         setClienteConvenioSelecionado(null);
         setBuscaConvenio('');
-        if (!pagamentoValor || getNumericValue(pagamentoValor) === 0) {
-            setPagamentoValor(restante > 0 ? formatCurrencyStr(restante) : '');
-        }
         if (value !== 'convenio') {
             setTimeout(() => inputPagamentoValorRef.current?.focus(), 50);
         } else {
             setTimeout(() => inputConvenioRef.current?.focus(), 50);
         }
-    }, [pagamentoValor, restante]);
+    }, []);
+
+    // Chamado pelo Enter no modal de pagamento (via onConfirm do Modal)
+    // Sem valor digitado → adiciona o restante e finaliza a venda
+    // Com valor digitado → adiciona pagamento parcial apenas
+    const handleConfirmPagamento = useCallback(() => {
+        const valorDigitado = getNumericValue(pagamentoValor);
+
+        if (valorDigitado > 0) {
+            adicionarPagamento();
+            return;
+        }
+
+        if (restante <= 0) {
+            finalizarVenda([]);
+            return;
+        }
+
+        if (isConvenio && !clienteConvenioSelecionado) {
+            showNotification('Selecione um cliente conveniado', 'warning');
+            return;
+        }
+
+        const novoPagamento = { forma: pagamentoForma, valor: restante };
+        if (isConvenio && clienteConvenioSelecionado) {
+            novoPagamento.clienteConvenio = clienteConvenioSelecionado;
+        }
+
+        finalizarVenda([novoPagamento]);
+    }, [pagamentoValor, restante, isConvenio, clienteConvenioSelecionado, pagamentoForma, adicionarPagamento, finalizarVenda, showNotification]);
 
     const handlePaymentKeyDown = useCallback((e) => {
         if (!modalPagamento) return;
@@ -499,7 +525,7 @@ function Vendas() {
             default:
                 break;
         }
-    }, [modalDesconto, modalAcrescimo, modalCpf, modalPagamento, modalCancelarVenda, modalCancelarItem, itensVenda, handlePaymentKeyDown]);
+    }, [modalDesconto, modalAcrescimo, modalCpf, modalPagamento, modalCancelarVenda, modalCancelarItem, itensVenda, handlePaymentKeyDown, finalizarVenda]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -730,7 +756,7 @@ function Vendas() {
                             <div className="totais-actions">
                                 <button
                                     className="btn-finalizar"
-                                    onClick={finalizarVenda}
+                                    onClick={() => finalizarVenda()}
                                     disabled={itensVenda.length === 0 || finalizando}
                                 >
                                     {finalizando ? 'Finalizando...' : 'Finalizar Venda (F12)'}
@@ -833,7 +859,7 @@ function Vendas() {
                     onClose={() => setModalPagamento(false)}
                     title="Forma de Pagamento"
                     maxWidth="580px"
-                    onConfirm={adicionarPagamento}
+                    onConfirm={handleConfirmPagamento}
                     footer={
                         <div className="pagamento-modal-footer-row">
                             <button
@@ -845,7 +871,7 @@ function Vendas() {
                             </button>
                             <button
                                 className="btn-modal-confirm btn-finalizar-modal"
-                                onClick={finalizarVenda}
+                                onClick={() => finalizarVenda()}
                                 disabled={finalizando || restante > 0.01}
                                 title="Finalizar Venda (F12)"
                             >
@@ -855,7 +881,6 @@ function Vendas() {
                     }
                 >
                     <div className="pagamento-modal-section">
-                        {/* Info de totais */}
                         <div className="pagamento-modal-total-info">
                             <div className="pagamento-total-row">
                                 <span>Total da Venda</span>
@@ -879,7 +904,6 @@ function Vendas() {
                             Selecione a forma (↑↓ ou F1-F{formasPagamento.length})
                         </label>
 
-                        {/* Grid 2 colunas para as formas de pagamento */}
                         <div className="pagamento-modal-grid">
                             {formasPagamento.map((p, i) => (
                                 <button
@@ -894,7 +918,6 @@ function Vendas() {
                             ))}
                         </div>
 
-                        {/* Campo de busca convênio (somente quando convênio selecionado) */}
                         {isConvenio && (
                             <div className="convenio-busca-section">
                                 <label className="pagamento-modal-label">Cliente Conveniado</label>
@@ -936,7 +959,6 @@ function Vendas() {
                             </div>
                         )}
 
-                        {/* Valor + botões */}
                         <div className="pagamento-valor-input-row">
                             <div className="form-group">
                                 <label>Valor</label>
@@ -957,19 +979,18 @@ function Vendas() {
                             </button>
                         </div>
 
-                        {/* Pagamentos adicionados scroll interno limitado */}
                         {pagamentos.length > 0 && (
-                            <div className="pagamento-entries-list">
-                                <label>Pagamentos adicionados</label>
-                                <div className="pagamento-entries-scroll">
+                            <div className="pagamento-chips-wrapper">
+                                <label className="pagamento-modal-label">Pagamentos adicionados</label>
+                                <div className="pagamento-chips">
                                     {pagamentos.map((p, i) => (
-                                        <div className="pagamento-entry-modal" key={i}>
-                                            <span className="pagamento-entry-modal-forma">
+                                        <div className="pagamento-chip" key={i}>
+                                            <span className="chip-label">
                                                 {formatarPagamento(p.forma)}
-                                                {p.clienteConvenio && ` ${p.clienteConvenio.nome}`}
+                                                {p.clienteConvenio && ` · ${p.clienteConvenio.nome}`}
                                             </span>
-                                            <span className="pagamento-entry-modal-valor">{fmt(p.valor)}</span>
-                                            <button onClick={() => removerPagamento(i)}>×</button>
+                                            <span className="chip-valor">{fmt(p.valor)}</span>
+                                            <button className="chip-remove" onClick={() => removerPagamento(i)}>×</button>
                                         </div>
                                     ))}
                                 </div>

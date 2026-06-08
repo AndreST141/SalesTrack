@@ -73,6 +73,7 @@ const PAYMENT_LABELS = {
   cartao_credito: 'Cartão Crédito',
   cartao_debito: 'Cartão Débito',
   pix: 'PIX',
+  convenio: 'Convênio',
   outro: 'Outro',
 };
 
@@ -134,8 +135,12 @@ function Dashboard() {
     if (!vendasRaw.length) return [];
     const counts = {};
     vendasRaw.forEach((v) => {
-      const forma = v.formaPagamento || 'outro';
-      counts[forma] = (counts[forma] || 0) + 1;
+      const pagamentos = v.pagamentos?.length
+        ? v.pagamentos.map(p => p.formaPagamento)
+        : [v.formaPagamento || 'outro'];
+      pagamentos.forEach(forma => {
+        counts[forma] = (counts[forma] || 0) + 1;
+      });
     });
     return Object.entries(counts).map(([key, value]) => ({
       name: PAYMENT_LABELS[key] || key,

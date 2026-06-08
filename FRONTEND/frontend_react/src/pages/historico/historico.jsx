@@ -5,6 +5,7 @@ import Modal from '../../components/Modal/Modal';
 import FilterModal from '../../components/FilterModal/FilterModal';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import './style.css';
 
 function Historico() {
@@ -17,7 +18,16 @@ function Historico() {
     const [modalFiltros, setModalFiltros] = useState(false);
     const [activeFilters, setActiveFilters] = useState({});
 
+    const [modalCancelar, setModalCancelar] = useState(false);
+    const [modalSenhaAdmin, setModalSenhaAdmin] = useState(false);
+    const [vendaParaCancelar, setVendaParaCancelar] = useState(null);
+    const [cancelando, setCancelando] = useState(false);
+    const [adminSenha, setAdminSenha] = useState('');
+
     const { showNotification } = useNotification();
+    const { user } = useAuth();
+
+    const podeEscalarDireto = ['admin', 'supervisor', 'tecnico'].includes(user?.tipo);
 
     const fmt = (val) =>
         Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -28,6 +38,7 @@ function Historico() {
             cartao_credito: 'Cartão Crédito',
             cartao_debito: 'Cartão Débito',
             pix: 'PIX',
+            convenio: 'Convênio',
             outro: 'Outro',
         };
         return mapa[forma] || forma;
@@ -39,6 +50,7 @@ function Historico() {
             cartao_credito: 'badge-info',
             cartao_debito: 'badge-info',
             pix: 'badge-warning',
+            convenio: 'badge-purple',
             outro: 'badge-neutral',
         };
         return classes[forma] || 'badge-neutral';
@@ -75,6 +87,43 @@ function Historico() {
             setLoadingDetalhes(false);
         }
     }
+
+    function handleCancelarClick(item) {
+        setVendaParaCancelar(item);
+        if (podeEscalarDireto) {
+            setModalCancelar(true);
+        } else {
+            setAdminSenha('');
+            setModalSenhaAdmin(true);
+        }
+    }
+
+    function fecharModalSenha() {
+        setModalSenhaAdmin(false);
+        setVendaParaCancelar(null);
+        setAdminSenha('');
+    }
+
+    async function confirmarCancelamento(senha = null) {
+        if (!vendaParaCancelar) return;
+        setCancelando(true);
+        try {
+            const body = senha ? { admin_senha: senha } : {};
+            await api.patch(`/vendas/${vendaParaCancelar.idVenda}/cancelar`, body);
+            showNotification('Venda cancelada e estoque restaurado com sucesso!', 'success');
+            setModalCancelar(false);
+            setModalSenhaAdmin(false);
+            setVendaParaCancelar(null);
+            setAdminSenha('');
+            await carregarVendas();
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Erro ao cancelar a venda';
+            showNotification(msg, 'error');
+        } finally {
+            setCancelando(false);
+        }
+    }
+
     const filterDefinitions = [
         { key: 'idVenda', label: 'ID da Venda', type: 'text', placeholder: 'Ex: 1', exactMatch: true },
         {
@@ -86,6 +135,7 @@ function Historico() {
                 { value: 'cartao_credito', label: 'Cartão Crédito' },
                 { value: 'cartao_debito', label: 'Cartão Débito' },
                 { value: 'pix', label: 'PIX' },
+                { value: 'convenio', label: 'Convênio' },
                 { value: 'outro', label: 'Outro' },
             ],
         },
@@ -135,6 +185,16 @@ function Historico() {
                 );
             },
         },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (val) => {
+                const map = { concluida: 'badge-success', cancelada: 'badge-danger', pendente: 'badge-warning' };
+                const label = { concluida: 'Concluída', cancelada: 'Cancelada', pendente: 'Pendente' };
+                const s = val || 'concluida';
+                return <span className={`badge ${map[s] || 'badge-neutral'}`}>{label[s] || s}</span>;
+            },
+        },
     ];
 
     return (
@@ -165,9 +225,21 @@ function Historico() {
                             </button>
                         }
                         actions={(item) => (
-                            <button className="btn-action" onClick={() => verDetalhes(item)}>
-                                Ver detalhes
-                            </button>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                <button className="btn-action" onClick={() => verDetalhes(item)}>
+                                    Ver detalhes
+                                </button>
+                                {item.status !== 'cancelada' && (
+                                    <button
+                                        className="btn-action"
+                                        style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                                        onClick={() => handleCancelarClick(item)}
+                                        title="Cancelar e estornar esta venda"
+                                    >
+                                        Cancelar
+                                    </button>
+                                )}
+                            </div>
                         )}
                     />
                 </div>
@@ -178,6 +250,8 @@ function Historico() {
                     activeFilters={activeFilters}
                     onApply={setActiveFilters}
                 />
+
+                {/* Modal Detalhes */}
                 <Modal
                     isOpen={modalDetalhes}
                     onClose={() => { setModalDetalhes(false); setVendaSelecionada(null); }}
@@ -205,6 +279,29 @@ function Historico() {
                                 <span className="detail-label">Vendedor</span>
                                 <span className="detail-value">{vendaSelecionada.vendedorNome}</span>
                             </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Status</span>
+                                <span className="detail-value">
+                                    {(() => {
+                                        const s = vendaSelecionada.status || 'concluida';
+                                        const map = { concluida: 'badge-success', cancelada: 'badge-danger', pendente: 'badge-warning' };
+                                        const label = { concluida: 'Concluída', cancelada: 'Cancelada', pendente: 'Pendente' };
+                                        return <span className={`badge ${map[s] || 'badge-neutral'}`}>{label[s] || s}</span>;
+                                    })()}
+                                </span>
+                            </div>
+                            {vendaSelecionada.status === 'cancelada' && vendaSelecionada.canceladoPor && (
+                                <div className="detail-row">
+                                    <span className="detail-label">Cancelado por</span>
+                                    <span className="detail-value">{vendaSelecionada.canceladoPor}</span>
+                                </div>
+                            )}
+                            {vendaSelecionada.status === 'cancelada' && vendaSelecionada.autorizadoPor && (
+                                <div className="detail-row">
+                                    <span className="detail-label">Autorizado por</span>
+                                    <span className="detail-value">{vendaSelecionada.autorizadoPor}</span>
+                                </div>
+                            )}
                             <div className="detail-row">
                                 <span className="detail-label">Pagamento</span>
                                 <span className="detail-value">
@@ -273,6 +370,75 @@ function Historico() {
                             </div>
                         </>
                     ) : null}
+                </Modal>
+
+                {/* Modal Confirmar Cancelamento (admin/supervisor/tecnico) */}
+                <Modal
+                    isOpen={modalCancelar}
+                    onClose={() => { setModalCancelar(false); setVendaParaCancelar(null); }}
+                    title="Cancelar Venda"
+                    maxWidth="420px"
+                    footer={
+                        <>
+                            <button
+                                className="btn-modal-cancel"
+                                onClick={() => { setModalCancelar(false); setVendaParaCancelar(null); }}
+                            >
+                                Voltar
+                            </button>
+                            <button
+                                className="btn-modal-danger"
+                                onClick={() => confirmarCancelamento()}
+                                disabled={cancelando}
+                            >
+                                {cancelando ? 'Cancelando...' : 'Confirmar Cancelamento'}
+                            </button>
+                        </>
+                    }
+                >
+                    <p className="confirm-message">
+                        Deseja cancelar a <strong>Venda #{vendaParaCancelar?.idVenda}</strong>?<br />
+                        Esta ação irá <strong>restaurar os itens ao estoque</strong> e não pode ser desfeita.
+                    </p>
+                </Modal>
+
+                {/* Modal Autorização de Cancelamento (vendedor — requer senha de admin/supervisor) */}
+                <Modal
+                    isOpen={modalSenhaAdmin}
+                    onClose={fecharModalSenha}
+                    title="Autorização de Cancelamento"
+                    maxWidth="420px"
+                    onConfirm={() => confirmarCancelamento(adminSenha)}
+                    footer={
+                        <>
+                            <button className="btn-modal-cancel" onClick={fecharModalSenha}>
+                                Voltar
+                            </button>
+                            <button
+                                className="btn-modal-danger"
+                                onClick={() => confirmarCancelamento(adminSenha)}
+                                disabled={cancelando || !adminSenha.trim()}
+                            >
+                                {cancelando ? 'Verificando...' : 'Confirmar Cancelamento'}
+                            </button>
+                        </>
+                    }
+                >
+                    <p className="confirm-message" style={{ paddingBottom: '12px' }}>
+                        Para cancelar a <strong>Venda #{vendaParaCancelar?.idVenda}</strong>,<br />
+                        informe a senha de um <strong>administrador ou supervisor</strong>:
+                    </p>
+                    <div className="form-group">
+                        <label>Senha <span className="required">*</span></label>
+                        <input
+                            type="password"
+                            value={adminSenha}
+                            onChange={e => setAdminSenha(e.target.value)}
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                            autoFocus
+                        />
+                    </div>
                 </Modal>
             </div>
         </div>
