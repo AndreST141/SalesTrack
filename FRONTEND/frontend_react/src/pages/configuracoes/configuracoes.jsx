@@ -480,7 +480,38 @@ function Configuracoes() {
                         </div>
                     </div>
 
-                    {/* ── 2. Comportamento de Vendas ──────────────── */}
+                    {/* ── 2. Usuários ─────────────────────────────── */}
+                    <div className="config-card">
+                        <div className="config-card-header">
+                            <div className="config-card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2>Usuários</h2>
+                                <p>Gerencie os usuários e perfis de acesso do sistema</p>
+                            </div>
+                        </div>
+                        <div className="config-card-body">
+                            <div className="config-actions-row">
+                                <button className="btn-primary" onClick={abrirModalUsuarios}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                    </svg>
+                                    Gerenciar Usuários
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── 3. Comportamento de Vendas ──────────────── */}
                     <div className="config-card">
                         <div className="config-card-header">
                             <div className="config-card-icon config-card-icon--green">
@@ -520,7 +551,7 @@ function Configuracoes() {
                         </div>
                     </div>
 
-                    {/* ── 3. Impressão ────────────────────────────── */}
+                    {/* ── 4. Impressão ────────────────────────────── */}
                     <div className="config-card">
                         <div className="config-card-header">
                             <div className="config-card-icon config-card-icon--purple">
@@ -565,9 +596,10 @@ function Configuracoes() {
                                 </div>
                             </div>
                         </div>
+                        <div className="config-card-badge">Em desenvolvimento</div>
                     </div>
 
-                    {/* ── 4. Integração Pinpad ────────────────────── */}
+                    {/* ── 5. Integração Pinpad ────────────────────── */}
                     <div className="config-card">
                         <div className="config-card-header">
                             <div className="config-card-icon">
@@ -602,7 +634,7 @@ function Configuracoes() {
                         <div className="config-card-badge">Em desenvolvimento</div>
                     </div>
 
-                    {/* ── 5. Backup ───────────────────────────────── */}
+                    {/* ── 6. Backup ───────────────────────────────── */}
                     <div className="config-card">
                         <div className="config-card-header">
                             <div className="config-card-icon config-card-icon--amber">
@@ -656,6 +688,187 @@ function Configuracoes() {
 
                 </div>
             </div>
+
+            {/* ── Modal Gerenciar Usuários ──────────────────────── */}
+            <Modal
+                isOpen={modalUsuarios}
+                onClose={() => { setModalUsuarios(false); setViewCriar(false); setViewEditar(false); }}
+                title={viewCriar ? 'Cadastrar Novo Usuário' : viewEditar ? 'Editar Usuário' : 'Gerenciar Usuários'}
+                maxWidth="680px"
+                footer={
+                    viewCriar ? (
+                        <>
+                            <button className="btn-modal-cancel" onClick={() => { setViewCriar(false); setErrosCriar({}); }}>Voltar</button>
+                            <button className="btn-primary" onClick={criarUsuario} disabled={criando}>
+                                {criando ? 'Cadastrando...' : 'Cadastrar Usuário'}
+                            </button>
+                        </>
+                    ) : viewEditar ? (
+                        <>
+                            <button className="btn-modal-cancel" onClick={() => { setViewEditar(false); setUsuarioEditando(null); setErrosEditar({}); }}>Voltar</button>
+                            <button className="btn-primary" onClick={salvarEdicao} disabled={editando}>
+                                {editando ? 'Salvando...' : 'Salvar Alterações'}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button className="btn-modal-cancel" onClick={() => setModalUsuarios(false)}>Fechar</button>
+                            <button className="btn-primary" onClick={() => { setViewCriar(true); setErrosCriar({}); setNovoUsuario({ nome: '', email: '', senha: '', tipo: 'vendedor' }); }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                Cadastrar Novo
+                            </button>
+                        </>
+                    )
+                }
+            >
+                {viewCriar ? (
+                    <div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Nome <span className="required">*</span></label>
+                                <input type="text" placeholder="Nome completo" value={novoUsuario.nome}
+                                    onChange={e => handleNovoUsuarioChange('nome', e.target.value)}
+                                    className={errosCriar.nome ? 'input-error' : ''} />
+                                {errosCriar.nome && <span className="field-error">{errosCriar.nome}</span>}
+                            </div>
+                            <div className="form-group">
+                                <label>Perfil <span className="required">*</span></label>
+                                <select value={novoUsuario.tipo} onChange={e => handleNovoUsuarioChange('tipo', e.target.value)}
+                                    className={errosCriar.tipo ? 'input-error' : ''}>
+                                    <option value="vendedor">Vendedor</option>
+                                    <option value="supervisor">Supervisor</option>
+                                    <option value="admin">Administrador</option>
+                                </select>
+                                {errosCriar.tipo && <span className="field-error">{errosCriar.tipo}</span>}
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>E-mail <span className="required">*</span></label>
+                            <input type="email" placeholder="usuario@empresa.com" value={novoUsuario.email}
+                                onChange={e => handleNovoUsuarioChange('email', e.target.value)}
+                                className={errosCriar.email ? 'input-error' : ''} autoComplete="off" />
+                            {errosCriar.email && <span className="field-error">{errosCriar.email}</span>}
+                        </div>
+                        <div className="form-group">
+                            <label>Senha <span className="required">*</span></label>
+                            <input type="password" placeholder="Mínimo 4 caracteres" value={novoUsuario.senha}
+                                onChange={e => handleNovoUsuarioChange('senha', e.target.value)}
+                                className={errosCriar.senha ? 'input-error' : ''} autoComplete="new-password" />
+                            {errosCriar.senha && <span className="field-error">{errosCriar.senha}</span>}
+                        </div>
+                    </div>
+                ) : viewEditar && usuarioEditando ? (
+                    <div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Nome <span className="required">*</span></label>
+                                <input type="text" placeholder="Nome completo" value={usuarioEditando.nome}
+                                    onChange={e => handleEditarChange('nome', e.target.value)}
+                                    className={errosEditar.nome ? 'input-error' : ''} />
+                                {errosEditar.nome && <span className="field-error">{errosEditar.nome}</span>}
+                            </div>
+                            <div className="form-group">
+                                <label>Perfil <span className="required">*</span></label>
+                                <select value={usuarioEditando.tipo} onChange={e => handleEditarChange('tipo', e.target.value)}
+                                    className={errosEditar.tipo ? 'input-error' : ''}>
+                                    <option value="vendedor">Vendedor</option>
+                                    <option value="supervisor">Supervisor</option>
+                                    <option value="admin">Administrador</option>
+                                </select>
+                                {errosEditar.tipo && <span className="field-error">{errosEditar.tipo}</span>}
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>E-mail</label>
+                            <input type="text" value={usuarioEditando.email} disabled
+                                style={{ background: '#f8fafc', color: '#94a3b8', cursor: 'not-allowed' }} />
+                        </div>
+                        <div className="form-group">
+                            <label>Nova Senha <span style={{ color: '#94a3b8', fontWeight: 400 }}>(deixe em branco para manter)</span></label>
+                            <input type="password" placeholder="Mínimo 4 caracteres" value={usuarioEditando.senha}
+                                onChange={e => handleEditarChange('senha', e.target.value)}
+                                className={errosEditar.senha ? 'input-error' : ''} autoComplete="new-password" />
+                            {errosEditar.senha && <span className="field-error">{errosEditar.senha}</span>}
+                        </div>
+                    </div>
+                ) : (
+                    loadingUsuarios ? (
+                        <p style={{ textAlign: 'center', color: '#94a3b8', padding: '24px 0' }}>Carregando usuários...</p>
+                    ) : usuarios.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: '#94a3b8', padding: '24px 0' }}>Nenhum usuário cadastrado.</p>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>Nome</th>
+                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>E-mail</th>
+                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>Perfil</th>
+                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>Status</th>
+                                        <th style={{ padding: '8px 12px' }}></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {usuarios.map(u => (
+                                        <tr key={u.idUsuario} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                            <td style={{ padding: '10px 12px', color: '#0f172a', fontWeight: 500 }}>{u.nome}</td>
+                                            <td style={{ padding: '10px 12px', color: '#64748b' }}>{u.email}</td>
+                                            <td style={{ padding: '10px 12px' }}>
+                                                <span className={`badge ${TIPO_BADGE[u.tipo] || 'badge-neutral'}`}>
+                                                    {TIPO_LABELS[u.tipo] || u.tipo}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '10px 12px' }}>
+                                                <span className={`badge ${u.ativo ? 'badge-success' : 'badge-danger'}`}>
+                                                    {u.ativo ? 'Ativo' : 'Inativo'}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                                                <button onClick={() => abrirEditar(u)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px 6px', borderRadius: '6px' }}>
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                    </svg>
+                                                </button>
+                                                <button onClick={() => setUsuarioParaExcluir(u)} title="Inativar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '4px 6px', borderRadius: '6px' }}>
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                                                        <polyline points="3 6 5 6 21 6" />
+                                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                        <path d="M10 11v6M14 11v6" />
+                                                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                )}
+            </Modal>
+
+            {/* ── Modal Confirmação Exclusão ────────────────────── */}
+            <Modal
+                isOpen={!!usuarioParaExcluir}
+                onClose={() => setUsuarioParaExcluir(null)}
+                title="Inativar Usuário"
+                maxWidth="420px"
+                footer={
+                    <>
+                        <button className="btn-modal-cancel" onClick={() => setUsuarioParaExcluir(null)}>Cancelar</button>
+                        <button className="btn-modal-danger" onClick={confirmarExclusao}>Confirmar Inativação</button>
+                    </>
+                }
+            >
+                <p className="confirm-message">
+                    Deseja inativar o usuário <strong>{usuarioParaExcluir?.nome}</strong>?<br />
+                    O usuário perderá o acesso ao sistema, mas seu histórico será mantido.
+                </p>
+            </Modal>
         </div>
     );
 }
