@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from '../../components/SideBar/sidebar';
 import Table from '../../components/Table/Table';
 import Modal from '../../components/Modal/Modal';
@@ -8,12 +8,52 @@ import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import './style.css';
 
+// ── Máscaras ──────────────────────────────────────────────
+function mascaraCPF(v) {
+    const n = v.replace(/\D/g, '').slice(0, 11);
+    return n.replace(/^(\d{3})(\d)/, '$1.$2')
+            .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+            .replace(/\.(\d{3})(\d)/, '.$1-$2');
+}
+
+function mascaraTelefone(v) {
+    const n = v.replace(/\D/g, '').slice(0, 11);
+    if (n.length <= 10) return n.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/\($/, '(');
+    return n.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+}
+
+function mascaraCEP(v) {
+    const n = v.replace(/\D/g, '').slice(0, 8);
+    return n.length > 5 ? n.slice(0, 5) + '-' + n.slice(5) : n;
+}
+
+// ── Validação CPF ─────────────────────────────────────────
+function validarCPF(cpf) {
+    const n = cpf.replace(/\D/g, '');
+    if (n.length !== 11 || /^(\d)\1{10}$/.test(n)) return false;
+    const calc = (len) => {
+        let s = 0;
+        for (let i = 0; i < len; i++) s += parseInt(n[i]) * (len + 1 - i);
+        const r = (s * 10) % 11;
+        return r === 10 ? 0 : r;
+    };
+    return parseInt(n[9]) === calc(9) && parseInt(n[10]) === calc(10);
+}
+
 const formInicial = {
     nome: '',
     cpf: '',
     telefone: '',
     email: '',
-    endereco: '',
+    // endereço estruturado
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
+    observacoes: '',
     convenio: false,
     limiteConvenio: '',
 };
@@ -29,29 +69,54 @@ function Clientes() {
     const [form, setForm] = useState(formInicial);
     const [salvando, setSalvando] = useState(false);
     const [inativando, setInativando] = useState(false);
+    const [cpfErro, setCpfErro] = useState('');
+    const [cepLoading, setCepLoading] = useState(false);
+    const cepTimerRef = useRef(null);
+    const cepAbortRef = useRef(null);
 
     const [modalFiltros, setModalFiltros] = useState(false);
-    // Padrão: exibir somente ativos
     const [activeFilters, setActiveFilters] = useState({ _status: 'ativo' });
 
     const { showNotification } = useNotification();
 
-    const fmtCurrency = (val) =>
-        Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-    const formatCurrencyStr = (num) => {
-        return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
+    const formatCurrencyStr = (num) =>
+        num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const handleCurrencyInput = (value, field) => {
         const onlyNums = String(value).replace(/\D/g, '');
-        if (!onlyNums) {
-            handleFormChange(field, '');
-            return;
-        }
+        if (!onlyNums) { handleFormChange(field, ''); return; }
         const numeric = parseInt(onlyNums, 10) / 100;
         handleFormChange(field, formatCurrencyStr(numeric));
     };
+
+    // ── CEP lookup ───────────────────────────────────────
+    const buscarCep = useCallback((cepValue) => {
+        if (cepTimerRef.current) clearTimeout(cepTimerRef.current);
+        if (cepAbortRef.current) cepAbortRef.current.abort();
+        const nums = cepValue.replace(/\D/g, '');
+        if (nums.length !== 8) return;
+        cepTimerRef.current = setTimeout(async () => {
+            const controller = new AbortController();
+            cepAbortRef.current = controller;
+            setCepLoading(true);
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${nums}/json/`, { signal: controller.signal });
+                const data = await res.json();
+                if (data.erro) { showNotification('CEP não encontrado.', 'warning'); return; }
+                setForm(prev => ({
+                    ...prev,
+                    logradouro: data.logradouro || '',
+                    bairro: data.bairro || '',
+                    cidade: data.localidade || '',
+                    estado: data.uf || '',
+                }));
+            } catch (e) {
+                if (e.name !== 'AbortError') showNotification('Não foi possível consultar o CEP.', 'error');
+            } finally {
+                setCepLoading(false);
+            }
+        }, 700);
+    }, [showNotification]);
 
     async function carregarClientes() {
         setLoading(true);
@@ -81,12 +146,20 @@ function Clientes() {
 
     function abrirModalEditar(cliente) {
         setClienteSelecionado(cliente);
+        setCpfErro('');
         setForm({
             nome: cliente.nome || '',
             cpf: cliente.cpf || '',
             telefone: cliente.telefone || '',
             email: cliente.email || '',
-            endereco: cliente.endereco || '',
+            cep: '',
+            logradouro: cliente.endereco || '',
+            numero: '',
+            complemento: '',
+            bairro: '',
+            cidade: '',
+            estado: '',
+            observacoes: cliente.observacoes || '',
             convenio: cliente.convenio || false,
             limiteConvenio: cliente.limiteConvenio ? formatCurrencyStr(cliente.limiteConvenio) : '',
         });
@@ -99,8 +172,13 @@ function Clientes() {
     }
 
     async function salvarCliente() {
-        if (!form.nome) {
+        if (!form.nome.trim()) {
             showNotification('Preencha ao menos o nome do cliente', 'warning');
+            return;
+        }
+        const cpfNums = form.cpf.replace(/\D/g, '');
+        if (cpfNums.length > 0 && !validarCPF(form.cpf)) {
+            showNotification('CPF inválido. Verifique o número.', 'warning');
             return;
         }
 
@@ -111,12 +189,16 @@ function Clientes() {
                 return parseFloat(String(str).replace(/\./g, '').replace(',', '.'));
             };
 
+            // Monta o endereço a partir dos campos estruturados
+            const enderecoFinal = buildEndereco() || form.logradouro || null;
+
             const dados = {
-                nome: form.nome,
+                nome: form.nome.trim(),
                 cpf: form.cpf || null,
                 telefone: form.telefone || null,
                 email: form.email || null,
-                endereco: form.endereco || null,
+                endereco: enderecoFinal,
+                observacoes: form.observacoes || null,
                 convenio: form.convenio,
                 limiteConvenio: form.convenio ? getNumericValue(form.limiteConvenio) : null,
             };
@@ -179,7 +261,40 @@ function Clientes() {
     }
 
     function handleFormChange(field, value) {
-        setForm((prev) => ({ ...prev, [field]: value }));
+        if (field === 'cpf') {
+            const masked = mascaraCPF(value);
+            const nums = masked.replace(/\D/g, '');
+            if (nums.length === 11) {
+                setCpfErro(validarCPF(masked) ? '' : 'CPF inválido');
+            } else {
+                setCpfErro('');
+            }
+            setForm(prev => ({ ...prev, cpf: masked }));
+            return;
+        }
+        if (field === 'telefone') {
+            setForm(prev => ({ ...prev, telefone: mascaraTelefone(value) }));
+            return;
+        }
+        if (field === 'cep') {
+            const masked = mascaraCEP(value);
+            setForm(prev => ({ ...prev, cep: masked }));
+            buscarCep(masked);
+            return;
+        }
+        setForm(prev => ({ ...prev, [field]: value }));
+    }
+
+    function buildEndereco() {
+        const partes = [
+            form.logradouro,
+            form.numero   ? `Nº ${form.numero}` : '',
+            form.complemento,
+            form.bairro,
+            form.cidade && form.estado ? `${form.cidade} - ${form.estado}` : (form.cidade || form.estado),
+            form.cep      ? `CEP: ${form.cep}` : '',
+        ].filter(Boolean);
+        return partes.join(', ');
     }
 
     const estaAtivo = clienteSelecionado
@@ -309,52 +424,98 @@ function Clientes() {
                         </div>
                     }
                 >
+                    {/* ── Dados pessoais ── */}
                     <div className="form-group">
-                        <label>Nome *</label>
-                        <input
-                            type="text"
-                            value={form.nome}
-                            onChange={(e) => handleFormChange('nome', e.target.value)}
-                            placeholder="Nome completo"
-                        />
+                        <label>Nome <span style={{ color: '#ef4444' }}>*</span></label>
+                        <input type="text" value={form.nome}
+                            onChange={e => handleFormChange('nome', e.target.value)}
+                            placeholder="Nome completo" autoFocus />
                     </div>
                     <div className="form-row">
                         <div className="form-group">
                             <label>CPF</label>
-                            <input
-                                type="text"
-                                value={form.cpf}
-                                onChange={(e) => handleFormChange('cpf', e.target.value)}
+                            <input type="text" value={form.cpf}
+                                onChange={e => handleFormChange('cpf', e.target.value)}
                                 placeholder="000.000.000-00"
-                            />
+                                className={cpfErro ? 'input-error' : ''} />
+                            {cpfErro && <span className="field-error">{cpfErro}</span>}
                         </div>
                         <div className="form-group">
                             <label>Telefone</label>
-                            <input
-                                type="text"
-                                value={form.telefone}
-                                onChange={(e) => handleFormChange('telefone', e.target.value)}
-                                placeholder="(00) 00000-0000"
-                            />
+                            <input type="text" value={form.telefone}
+                                onChange={e => handleFormChange('telefone', e.target.value)}
+                                placeholder="(00) 00000-0000" />
                         </div>
                     </div>
                     <div className="form-group">
-                        <label>Email</label>
-                        <input
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => handleFormChange('email', e.target.value)}
-                            placeholder="email@exemplo.com"
-                        />
+                        <label>E-mail</label>
+                        <input type="email" value={form.email}
+                            onChange={e => handleFormChange('email', e.target.value)}
+                            placeholder="email@exemplo.com" />
+                    </div>
+
+                    {/* ── Endereço ── */}
+                    <div style={{ borderTop: '1px solid #f1f5f9', margin: '4px 0 10px', paddingTop: '10px' }}>
+                        <p style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>ENDEREÇO</p>
+                    </div>
+                    <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                        <div className="form-group">
+                            <label>CEP</label>
+                            <div style={{ position: 'relative' }}>
+                                <input type="text" value={form.cep}
+                                    onChange={e => handleFormChange('cep', e.target.value)}
+                                    placeholder="00000-000" />
+                                {cepLoading && (
+                                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, border: '2px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                                )}
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>Número</label>
+                            <input type="text" value={form.numero}
+                                onChange={e => handleFormChange('numero', e.target.value)}
+                                placeholder="Nº" />
+                        </div>
+                        <div className="form-group">
+                            <label>Complemento</label>
+                            <input type="text" value={form.complemento}
+                                onChange={e => handleFormChange('complemento', e.target.value)}
+                                placeholder="Apto, sala..." />
+                        </div>
                     </div>
                     <div className="form-group">
-                        <label>Endereço</label>
-                        <textarea
-                            value={form.endereco}
-                            onChange={(e) => handleFormChange('endereco', e.target.value)}
-                            placeholder="Endereço completo"
-                            rows={2}
-                        />
+                        <label>Logradouro</label>
+                        <input type="text" value={form.logradouro}
+                            onChange={e => handleFormChange('logradouro', e.target.value)}
+                            placeholder="Rua, Avenida..." />
+                    </div>
+                    <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 80px' }}>
+                        <div className="form-group">
+                            <label>Bairro</label>
+                            <input type="text" value={form.bairro}
+                                onChange={e => handleFormChange('bairro', e.target.value)}
+                                placeholder="Bairro" />
+                        </div>
+                        <div className="form-group">
+                            <label>Cidade</label>
+                            <input type="text" value={form.cidade}
+                                onChange={e => handleFormChange('cidade', e.target.value)}
+                                placeholder="Cidade" />
+                        </div>
+                        <div className="form-group">
+                            <label>UF</label>
+                            <input type="text" value={form.estado} maxLength={2}
+                                onChange={e => handleFormChange('estado', e.target.value.toUpperCase())}
+                                placeholder="UF" />
+                        </div>
+                    </div>
+
+                    {/* ── Observações ── */}
+                    <div className="form-group">
+                        <label>Observações</label>
+                        <textarea value={form.observacoes}
+                            onChange={e => handleFormChange('observacoes', e.target.value)}
+                            placeholder="Anotações sobre o cliente..." rows={2} />
                     </div>
 
                     {/* ── Seção Convênio ── */}
