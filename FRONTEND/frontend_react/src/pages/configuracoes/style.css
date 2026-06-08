@@ -89,6 +89,42 @@
     margin: 2px 0 0;
 }
 
+/* badge de status no cabeçalho do card empresa */
+.config-card-status {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+.config-card-status--ok  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.config-card-status--inc { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+
+/* campo com valor válido */
+.config-card .config-field input.input-valid {
+    border-color: #22c55e;
+    background: #f0fdf4;
+}
+
+/* label de seção interna */
+.config-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+.config-section-label svg {
+    width: 13px;
+    height: 13px;
+    color: #94a3b8;
+}
+
 .config-card .config-card-body {
     padding: 18px 22px;
 }

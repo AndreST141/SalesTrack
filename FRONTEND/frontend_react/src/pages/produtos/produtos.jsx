@@ -79,8 +79,8 @@ function Produtos() {
     }
 
     async function salvarProduto() {
-        if (!form.nome || !form.preco) {
-            showNotification('Preencha ao menos o nome e o preço', 'warning');
+        if (!form.nome || !form.preco || parseFloat(form.preco) <= 0) {
+            showNotification('Preencha o nome e um preço válido (maior que zero)', 'warning');
             return;
         }
 
