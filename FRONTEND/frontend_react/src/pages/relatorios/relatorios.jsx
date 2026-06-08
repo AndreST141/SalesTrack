@@ -40,30 +40,35 @@ const PIE_COLORS = ['#2563eb', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b
 const BAR_COLORS = ['#2563eb', '#7c3aed', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e', '#6366f1'];
 
 /* ─── Date preset helpers ─── */
+function toLocalISO(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
 function getToday() {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
+    return toLocalISO(new Date());
 }
 function getDaysAgo(n) {
     const d = new Date();
     d.setDate(d.getDate() - n);
-    return d.toISOString().split('T')[0];
+    return toLocalISO(d);
 }
 function getMonthStart() {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return toLocalISO(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 function getMonthEnd() {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+    return toLocalISO(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 }
 function getLastMonthStart() {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().split('T')[0];
+    return toLocalISO(new Date(d.getFullYear(), d.getMonth() - 1, 1));
 }
 function getLastMonthEnd() {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().split('T')[0];
+    return toLocalISO(new Date(d.getFullYear(), d.getMonth(), 0));
 }
 
 const DATE_PRESETS = [
