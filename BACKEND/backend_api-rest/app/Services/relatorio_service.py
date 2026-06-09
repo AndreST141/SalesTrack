@@ -25,8 +25,8 @@ class RelatorioService:
         return {'status': 200, 'produtos': rows}
 
     @staticmethod
-    def get_produtos_sem_movimento():
-        rows = RelatorioRepository.get_produtos_sem_movimento()
+    def get_produtos_sem_movimento(data_inicio, data_fim):
+        rows = RelatorioRepository.get_produtos_sem_movimento(data_inicio, data_fim)
         for r in rows:
             r['preco']       = float(r['preco'])
             r['valorEstoque'] = float(r['valorEstoque'])

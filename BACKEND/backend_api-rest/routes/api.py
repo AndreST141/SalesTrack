@@ -60,8 +60,10 @@ dashboard_bp.route('/api/dashboard/produtos-mais-vendidos', methods=['GET'])(tok
 # Usuários
 # =============================================
 usuario_bp = Blueprint('usuarios', __name__)
-usuario_bp.route('/api/usuarios',          methods=['GET'] )(token_required(UserController.index))
-usuario_bp.route('/api/usuarios',          methods=['POST'])(token_required(UserController.store))
+usuario_bp.route('/api/usuarios',               methods=['GET'] )(token_required(UserController.index))
+usuario_bp.route('/api/usuarios',               methods=['POST'])(token_required(UserController.store))
+usuario_bp.route('/api/usuarios/<int:user_id>', methods=['PUT']  )(token_required(UserController.update))
+usuario_bp.route('/api/usuarios/<int:user_id>', methods=['DELETE'])(token_required(UserController.delete))
 
 # =============================================
 # Relatórios
