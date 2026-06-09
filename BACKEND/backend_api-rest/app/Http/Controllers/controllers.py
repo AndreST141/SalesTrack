@@ -184,6 +184,22 @@ class UserController:
             return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True, 'id': result.get('id')}), result['status']
 
+    @staticmethod
+    def update(user_id):
+        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = UserService.update(user_id, request.json or {})
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'success': True}), 200
+
+    @staticmethod
+    def delete(user_id):
+        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = UserService.delete(user_id)
+        return jsonify({'success': True}), result['status']
+
 
 # =============================================
 # RelatorioController
@@ -211,7 +227,11 @@ class RelatorioController:
 
     @staticmethod
     def produtos_sem_movimento():
-        result = RelatorioService.get_produtos_sem_movimento()
+        data_inicio = request.args.get('data_inicio', '')
+        data_fim    = request.args.get('data_fim', '')
+        if not data_inicio or not data_fim:
+            return jsonify({'error': 'Informe data_inicio e data_fim'}), 400
+        result = RelatorioService.get_produtos_sem_movimento(data_inicio, data_fim)
         return jsonify(result['produtos']), result['status']
 
     @staticmethod
