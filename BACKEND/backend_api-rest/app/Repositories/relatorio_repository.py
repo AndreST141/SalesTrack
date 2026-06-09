@@ -64,8 +64,8 @@ class RelatorioRepository:
         return rows
 
     @staticmethod
-    def get_produtos_sem_movimento():
-        """Produtos ativos sem nenhuma venda concluída no último ano."""
+    def get_produtos_sem_movimento(data_inicio, data_fim):
+        """Produtos ativos sem nenhuma venda concluída no período informado."""
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
@@ -81,10 +81,10 @@ class RelatorioRepository:
                     FROM ItemVenda iv
                     JOIN Venda v ON iv.idVenda = v.idVenda
                     WHERE v.status = 'concluida'
-                      AND v.dataVenda >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+                      AND DATE(v.dataVenda) BETWEEN %s AND %s
               )
             ORDER BY valorEstoque DESC
-        """)
+        """, (data_inicio, data_fim))
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
