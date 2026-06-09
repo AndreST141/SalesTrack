@@ -92,18 +92,34 @@ class VendaRepository:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("""
-                INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, valorFinal, formaPagamento, observacoes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-                dados.get('idCliente'),
-                usuario_id,
-                dados['valorTotal'],
-                dados.get('desconto', 0),
-                dados['valorFinal'],
-                dados['formaPagamento'],
-                dados.get('observacoes', '')
-            ))
+            data_venda = dados.get('dataVenda')
+            if data_venda:
+                cursor.execute("""
+                    INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, valorFinal, formaPagamento, observacoes, dataVenda)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    dados.get('idCliente'),
+                    usuario_id,
+                    dados['valorTotal'],
+                    dados.get('desconto', 0),
+                    dados['valorFinal'],
+                    dados['formaPagamento'],
+                    dados.get('observacoes', ''),
+                    data_venda
+                ))
+            else:
+                cursor.execute("""
+                    INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, valorFinal, formaPagamento, observacoes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    dados.get('idCliente'),
+                    usuario_id,
+                    dados['valorTotal'],
+                    dados.get('desconto', 0),
+                    dados['valorFinal'],
+                    dados['formaPagamento'],
+                    dados.get('observacoes', '')
+                ))
             venda_id = cursor.lastrowid
 
             # Inserir itens da venda

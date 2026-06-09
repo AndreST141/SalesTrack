@@ -22,6 +22,8 @@ UPDATE Usuario SET nome = CONVERT(X'54C3A9636E69636F' USING utf8mb4) WHERE email
 
 -- 3. Adicionar colunas canceladoPor e autorizadoPor na tabela Venda (idempotente via procedure)
 DROP PROCEDURE IF EXISTS sp_add_canceladoPor;
+
+DELIMITER //
 CREATE PROCEDURE sp_add_canceladoPor()
 BEGIN
     IF NOT EXISTS (
@@ -40,6 +42,8 @@ BEGIN
     ) THEN
         ALTER TABLE Venda ADD COLUMN autorizadoPor VARCHAR(100) DEFAULT NULL;
     END IF;
-END;
+END //
+DELIMITER ;
+
 CALL sp_add_canceladoPor();
 DROP PROCEDURE IF EXISTS sp_add_canceladoPor;

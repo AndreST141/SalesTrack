@@ -40,3 +40,31 @@ class UserRepository:
         cursor.close()
         conn.close()
         return user_id
+
+    @staticmethod
+    def update(user_id, nome, tipo, senha=None):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if senha:
+            hashed = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            cursor.execute(
+                "UPDATE Usuario SET nome=%s, tipo=%s, senha=%s WHERE idUsuario=%s",
+                (nome, tipo, hashed, user_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE Usuario SET nome=%s, tipo=%s WHERE idUsuario=%s",
+                (nome, tipo, user_id)
+            )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    @staticmethod
+    def delete(user_id):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE Usuario SET ativo=FALSE WHERE idUsuario=%s", (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
