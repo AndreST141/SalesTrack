@@ -1,0 +1,25 @@
+# Modo desenvolvimento - sobrepõe docker-compose.yml
+# Uso: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Backend  → hot-reload via Flask debug (salve o arquivo, recarrega sozinho)
+# Frontend → Vite dev server com HMR na porta 5174
+#            (porta diferente de 5173 para não conflitar com o nginx do compose base)
+
+services:
+  frontend:
+    image: node:20-alpine
+    container_name: salestrack_frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    volumes:
+      - ./FRONTEND/frontend_react:/app
+      - salestrack_node_modules:/app/node_modules
+    ports:
+      - "5174:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    depends_on:
+      - backend
+
+volumes:
+  salestrack_node_modules:
