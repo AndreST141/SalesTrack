@@ -24,14 +24,15 @@ class ProdutoRepository:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO Produto (nome, descricao, preco, estoque, idCategoria)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO Produto (nome, descricao, preco, estoque, idCategoria, codigoBarras)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             dados['nome'],
             dados.get('descricao', ''),
             dados['preco'],
             dados.get('estoque', 0),
-            dados.get('idCategoria')
+            dados.get('idCategoria'),
+            dados.get('codigoBarras')
         ))
         conn.commit()
         produto_id = cursor.lastrowid
@@ -45,7 +46,7 @@ class ProdutoRepository:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE Produto
-            SET nome = %s, descricao = %s, preco = %s, estoque = %s, idCategoria = %s
+            SET nome = %s, descricao = %s, preco = %s, estoque = %s, idCategoria = %s, codigoBarras = %s
             WHERE idProduto = %s
         """, (
             dados['nome'],
@@ -53,6 +54,7 @@ class ProdutoRepository:
             dados['preco'],
             dados.get('estoque', 0),
             dados.get('idCategoria'),
+            dados.get('codigoBarras'),
             id
         ))
         conn.commit()

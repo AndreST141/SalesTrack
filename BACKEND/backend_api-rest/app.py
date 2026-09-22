@@ -1,6 +1,10 @@
+import os
 from flask import Flask
 from flask_cors import CORS
+from dotenv import load_dotenv
 from routes.api import auth_bp, produto_bp, cliente_bp, venda_bp, categoria_bp, dashboard_bp, usuario_bp, relatorio_bp
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -19,7 +23,12 @@ try:
 except AttributeError:
     pass  # Flask < 2.3, usa as configs acima
 
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+    if origin.strip()
+]
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 # Garantir Content-Type com charset=utf-8 em todas as respostas JSON
 @app.after_request

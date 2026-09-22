@@ -25,7 +25,7 @@
     border-radius: 10px;
     font-size: 14px;
     font-family: inherit;
-    color: #1e293b;
+    color: #0B2447;
     transition: border-color 0.2s;
     box-sizing: border-box;
     background: #fff;
@@ -34,7 +34,7 @@
 .filter-modal-grid .filter-field input:focus,
 .filter-modal-grid .filter-field select:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 /* ── Active Filter Pills ───────────────────────────────────────────── */
@@ -61,8 +61,8 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    background: #eff6ff;
-    color: #2563eb;
+    background: #E6F1FB;
+    color: #1570EF;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
@@ -71,7 +71,7 @@
 .filter-active-pills .filter-pill button {
     background: none;
     border: none;
-    color: #2563eb;
+    color: #1570EF;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;

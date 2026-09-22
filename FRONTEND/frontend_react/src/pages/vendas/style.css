@@ -27,7 +27,7 @@
 .body-vendas .content-vendas .title-page h1 {
     font-size: 22px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     letter-spacing: -0.3px;
 }
 
@@ -81,7 +81,7 @@
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-left .product-input-area .barcode-input-wrapper:focus-within {
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-left .product-input-area .barcode-input-wrapper .barcode-icon {
@@ -96,7 +96,7 @@
     border: none;
     outline: none;
     font-size: 16px;
-    color: #1e293b;
+    color: #0B2447;
     padding: 14px 0;
     flex: 1;
     font-family: inherit;
@@ -129,7 +129,7 @@
     text-align: center;
     font-size: 15px;
     font-weight: 600;
-    color: #1e293b;
+    color: #0B2447;
     font-family: inherit;
     background: transparent;
 }
@@ -177,7 +177,7 @@
 .body-vendas .content-vendas .vendas-content .vendas-left .product-input-area .sugestoes-dropdown .sugestao-item .sugestao-info .sugestao-nome {
     font-size: 14px;
     font-weight: 600;
-    color: #1e293b;
+    color: #0B2447;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-left .product-input-area .sugestoes-dropdown .sugestao-item .sugestao-info .sugestao-codigo {
@@ -195,7 +195,7 @@
 .body-vendas .content-vendas .vendas-content .vendas-left .product-input-area .sugestoes-dropdown .sugestao-item .sugestao-preco span:first-child {
     font-size: 14px;
     font-weight: 700;
-    color: #2563eb;
+    color: #1570EF;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-left .product-input-area .sugestoes-dropdown .sugestao-item .sugestao-preco .sugestao-estoque {
@@ -239,7 +239,7 @@
 .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody td {
     padding: 10px 14px;
     font-size: 14px;
-    color: #1e293b;
+    color: #0B2447;
     border-bottom: 1px solid #f1f5f9;
 }
 
@@ -260,7 +260,7 @@
 
 .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody .item-qtd {
     font-weight: 700;
-    color: #2563eb;
+    color: #1570EF;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody .item-subtotal {
@@ -318,7 +318,7 @@
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-header h2 {
     font-size: 15px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
 }
 
 /* ── Totals Body ──────────────────────────────────────────────────── */
@@ -337,7 +337,7 @@
 
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-body .totais-row span:last-child {
     font-weight: 600;
-    color: #1e293b;
+    color: #0B2447;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-body .desconto-row span:last-child {
@@ -364,7 +364,7 @@
     justify-content: space-between;
     font-size: 22px;
     font-weight: 800;
-    color: #0f172a;
+    color: #07142B;
     padding: 4px 0;
 }
 
@@ -411,14 +411,14 @@
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pagamento .pagamento-badges .pagamento-badge:hover {
-    border-color: #2563eb;
-    color: #2563eb;
+    border-color: #1570EF;
+    color: #1570EF;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pagamento .pagamento-badges .pagamento-badge.ativo {
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pagamento .pagamento-badges .pagamento-badge .pagamento-icon {
@@ -448,14 +448,14 @@
     border-radius: 8px;
     font-size: 13px;
     font-family: inherit;
-    color: #1e293b;
+    color: #0B2447;
     background: #fff;
     cursor: pointer;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-cliente select:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 /* ── Pinpad ───────────────────────────────────────────────────────── */
@@ -580,7 +580,7 @@
 .pagamento-total-row .pagamento-total-value {
     font-size: 17px;
     font-weight: 800;
-    color: #0f172a;
+    color: #07142B;
 }
 
 .pagamento-total-row .pagamento-pago-value {
@@ -632,14 +632,14 @@
 }
 
 .pagamento-modal-grid .pagamento-modal-option:hover {
-    border-color: #2563eb;
-    background: #eff6ff;
+    border-color: #1570EF;
+    background: #E6F1FB;
 }
 
 .pagamento-modal-grid .pagamento-modal-option.ativo,
 .pagamento-modal-grid .pagamento-modal-option.focused {
-    border-color: #2563eb;
-    background: #2563eb;
+    border-color: #1570EF;
+    background: #1570EF;
     color: #fff;
 }
 
@@ -695,21 +695,21 @@
     border-radius: 10px;
     font-size: 14px;
     font-family: inherit;
-    color: #1e293b;
+    color: #0B2447;
     box-sizing: border-box;
     background: #fff;
 }
 
 .pagamento-valor-input-row .form-group input:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 .pagamento-valor-input-row .btn-add-pagamento {
     padding: 10px 16px;
     border: none;
     border-radius: 10px;
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
     font-size: 13px;
     font-weight: 600;
@@ -720,7 +720,7 @@
 }
 
 .pagamento-valor-input-row .btn-add-pagamento:hover:not(:disabled) {
-    background: #1d4ed8;
+    background: #0C56C9;
 }
 
 .pagamento-valor-input-row .btn-add-pagamento:disabled {
@@ -744,8 +744,8 @@
 
 .pagamento-valor-input-row .btn-preencher-restante:hover:not(:disabled) {
     background: #f8fafc;
-    border-color: #2563eb;
-    color: #2563eb;
+    border-color: #1570EF;
+    color: #1570EF;
 }
 
 .pagamento-valor-input-row .btn-preencher-restante:disabled {
@@ -770,7 +770,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #eff6ff;
+    background: #E6F1FB;
     border: 1px solid #bfdbfe;
     border-radius: 20px;
     padding: 5px 8px 5px 12px;
@@ -779,13 +779,13 @@
 }
 
 .pagamento-chip .chip-label {
-    color: #1e40af;
+    color: #0C447C;
     font-weight: 600;
     white-space: nowrap;
 }
 
 .pagamento-chip .chip-valor {
-    color: #1d4ed8;
+    color: #0C56C9;
     font-weight: 700;
     white-space: nowrap;
 }
@@ -799,7 +799,7 @@
     background: #bfdbfe;
     border: none;
     border-radius: 50%;
-    color: #1e40af;
+    color: #0C447C;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -853,7 +853,7 @@
 
 .totais-pagamentos-split .pagamento-entry .pagamento-entry-valor {
     font-weight: 700;
-    color: #1e293b;
+    color: #0B2447;
 }
 
 .totais-pagamentos-split .pagamento-entry .pagamento-entry-remove {
@@ -877,7 +877,7 @@
     margin-top: 4px;
     padding-top: 6px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
 }
 
 .totais-pagamentos-split .pagamento-entry-total .pago-ok {
@@ -970,23 +970,23 @@
     background: #fff;
     font-size: 14px;
     font-family: inherit;
-    color: #1e293b;
+    color: #0B2447;
     transition: all 0.2s;
 }
 
 .convenio-busca-input:focus {
     outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    border-color: #1570EF;
+    box-shadow: 0 0 0 4px rgba(21, 112, 239, 0.1);
 }
 
 .convenio-selecionado-tag {
     position: absolute;
     right: 8px;
     height: 32px;
-    background: #eff6ff;
+    background: #E6F1FB;
     border: 1px solid #bfdbfe;
-    color: #2563eb;
+    color: #1570EF;
     border-radius: 8px;
     padding: 0 10px;
     display: flex;
@@ -999,7 +999,7 @@
 .convenio-selecionado-tag button {
     background: none;
     border: none;
-    color: #2563eb;
+    color: #1570EF;
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
@@ -1038,7 +1038,7 @@
 
 .convenio-sugestao-item:hover {
     background: #f8fafc;
-    color: #2563eb;
+    color: #1570EF;
 }
 
 .convenio-sugestao-item:last-child {

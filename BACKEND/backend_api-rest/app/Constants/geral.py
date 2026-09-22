@@ -4,12 +4,16 @@
 
 class Geral:
 
+    # Perfis com acesso administrativo total (gestão de usuários, catálogo, relatórios)
+    PERFIS_ADMIN = {'admin', 'tecnico'}
+
     # Auth
     TOKEN_NAO_FORNECIDO     = "Token não fornecido."
     TOKEN_INVALIDO          = "Token inválido ou expirado."
     CREDENCIAIS_INVALIDAS   = "Email ou senha incorretos."
     CAMPOS_OBRIGATORIOS     = "Email e senha são obrigatórios."
     LOGOUT_OK               = "Sessão encerrada com sucesso."
+    LOGIN_BLOQUEADO         = "Muitas tentativas de login. Tente novamente em {minutos} minuto(s)."
 
     # Produto
     PRODUTO_CADASTRADO      = "Produto cadastrado com sucesso."

@@ -27,7 +27,7 @@
 .body-dashboard .content-dashboard .title-page h1 {
     font-size: 22px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     letter-spacing: -0.3px;
 }
 
@@ -139,22 +139,22 @@
 .body-dashboard .content-dashboard .dashboard-body .charts-row .chart-card .chart-card-header h2 {
     font-size: 15px;
     font-weight: 650;
-    color: #0f172a;
+    color: #07142B;
     letter-spacing: -0.2px;
 }
 
 .body-dashboard .content-dashboard .dashboard-body .charts-row .chart-card .chart-card-header .chart-badge {
     font-size: 11px;
     font-weight: 500;
-    color: #2563eb;
-    background: #eff6ff;
+    color: #1570EF;
+    background: #E6F1FB;
     padding: 3px 10px;
     border-radius: 20px;
 }
 
 /* ── Tooltip ──────────────────────────────────────────────────────────────── */
 .body-dashboard .content-dashboard .dashboard-body .charts-row .chart-card .chart-tooltip {
-    background: #0f172a;
+    background: #07142B;
     border-radius: 8px;
     padding: 10px 14px;
 }
@@ -250,7 +250,7 @@
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #1e293b;
+    color: #0B2447;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -274,7 +274,7 @@
 .body-dashboard .content-dashboard .dashboard-body .charts-row .chart-card.produtos-card .produtos-list .produto-row .produto-stats .produto-un {
     font-size: 12px;
     font-weight: 700;
-    color: #2563eb;
+    color: #1570EF;
 }
 
 .body-dashboard .content-dashboard .dashboard-body .charts-row .chart-card.produtos-card .produtos-list .produto-row .produto-stats .produto-receita {
@@ -379,5 +379,5 @@
 .pie-chart-container .pie-legend .pie-legend-item .pie-legend-value {
     font-size: 13px;
     font-weight: 700;
-    color: #1e293b;
+    color: #0B2447;
 }

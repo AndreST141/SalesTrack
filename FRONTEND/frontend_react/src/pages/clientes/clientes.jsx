@@ -466,7 +466,7 @@ function Clientes() {
                                     onChange={e => handleFormChange('cep', e.target.value)}
                                     placeholder="00000-000" />
                                 {cepLoading && (
-                                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, border: '2px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, border: '2px solid #1570EF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
                                 )}
                             </div>
                         </div>

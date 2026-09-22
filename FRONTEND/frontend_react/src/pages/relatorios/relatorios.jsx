@@ -41,8 +41,8 @@ const PAYMENT_LABELS = {
     convenio: 'Convênio',
 };
 
-const PIE_COLORS = ['#2563eb', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e', '#64748b'];
-const BAR_COLORS = ['#2563eb', '#7c3aed', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e', '#6366f1'];
+const PIE_COLORS = ['#1570EF', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e', '#64748b'];
+const BAR_COLORS = ['#1570EF', '#7c3aed', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e', '#6366f1'];
 
 /* ─── Date preset helpers ─── */
 function toLocalISO(d) {
@@ -98,7 +98,7 @@ const REPORT_CATEGORIES = [
                 <path d="m19 9-5 5-4-4-3 3" />
             </svg>
         ),
-        accent: '#2563eb',
+        accent: '#1570EF',
         reports: [
             {
                 id: 'vendas-periodo',
@@ -438,7 +438,7 @@ function Relatorios() {
             data,
             kpis: [
                 { label: 'Total Vendas', value: fmt(totalReceita), accent: '#22c55e' },
-                { label: 'Qtd. Vendas', value: vendasBase.length, accent: '#2563eb' },
+                { label: 'Qtd. Vendas', value: vendasBase.length, accent: '#1570EF' },
                 { label: 'Ticket Médio', value: fmt(ticketMedio), accent: '#8b5cf6' },
             ],
             chartData,
@@ -485,7 +485,7 @@ function Relatorios() {
             ],
             data,
             kpis: [
-                { label: 'Formas Utilizadas', value: data.length, accent: '#2563eb' },
+                { label: 'Formas Utilizadas', value: data.length, accent: '#1570EF' },
                 { label: 'Total Geral', value: fmt(totalGeral), accent: '#22c55e' },
                 { label: 'Mais Usada', value: data[0]?.label || '-', accent: '#f59e0b' },
             ],
@@ -527,7 +527,7 @@ function Relatorios() {
             ],
             data,
             kpis: [
-                { label: 'Total Vendedores', value: data.length, accent: '#2563eb' },
+                { label: 'Total Vendedores', value: data.length, accent: '#1570EF' },
                 { label: 'Top Vendedor', value: data[0]?.vendedor || '-', accent: '#22c55e' },
                 { label: 'Maior Receita', value: fmt(data[0]?.total || 0), accent: '#f59e0b' },
             ],
@@ -609,7 +609,7 @@ function Relatorios() {
             data,
             kpis: [
                 { label: 'Produtos Vendidos', value: data.length, accent: '#22c55e' },
-                { label: 'Mais Vendido', value: data[0]?.nome || '-', accent: '#2563eb' },
+                { label: 'Mais Vendido', value: data[0]?.nome || '-', accent: '#1570EF' },
                 { label: 'Receita Total', value: fmt(receitaGeral), accent: '#f59e0b' },
             ],
             chartData,
@@ -659,7 +659,7 @@ function Relatorios() {
             ],
             data,
             kpis: [
-                { label: 'Produtos Ativos', value: ativos.length, accent: '#2563eb' },
+                { label: 'Produtos Ativos', value: ativos.length, accent: '#1570EF' },
                 { label: 'Valor em Estoque', value: fmt(totalValorEstoque), accent: '#22c55e' },
                 { label: 'Sem Estoque', value: semEstoque, accent: '#dc2626' },
                 { label: 'Estoque Baixo', value: estoqueBaixo, accent: '#f59e0b' },
@@ -744,7 +744,7 @@ function Relatorios() {
             kpis: [
                 { label: 'Total Clientes', value: data.length, accent: '#8b5cf6' },
                 { label: 'Ativos', value: ativos, accent: '#22c55e' },
-                { label: 'Com Convênio', value: comConvenio, accent: '#2563eb' },
+                { label: 'Com Convênio', value: comConvenio, accent: '#1570EF' },
             ],
             chartData: null,
             searchKeys: ['nome', 'cpf', 'telefone', 'email'],
@@ -796,7 +796,7 @@ function Relatorios() {
             data,
             kpis: [
                 { label: 'Conveniados', value: data.length, accent: '#8b5cf6' },
-                { label: 'Limite Total', value: fmt(totalLimite), accent: '#2563eb' },
+                { label: 'Limite Total', value: fmt(totalLimite), accent: '#1570EF' },
                 { label: 'Total Devedor', value: fmt(totalDevedor), accent: '#dc2626' },
             ],
             chartData: null,
@@ -847,7 +847,7 @@ function Relatorios() {
             data,
             kpis: [
                 { label: 'Receita Líquida', value: fmt(totalReceita), accent: '#22c55e' },
-                { label: 'Receita Bruta', value: fmt(totalBruto), accent: '#2563eb' },
+                { label: 'Receita Bruta', value: fmt(totalBruto), accent: '#1570EF' },
                 { label: 'Descontos', value: fmt(totalDescontos), accent: '#dc2626' },
                 { label: 'Ticket Médio', value: fmt(ticketMedio), accent: '#f59e0b' },
             ],
@@ -1119,7 +1119,7 @@ function Relatorios() {
 
                                 {/* Info message (ex: período fixo do sem-movimento) */}
                                 {reportData.infoMessage && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', color: '#1d4ed8', marginBottom: '4px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#E6F1FB', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', color: '#0C56C9', marginBottom: '4px' }}>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{ flexShrink: 0 }}>
                                             <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
                                         </svg>
@@ -1135,15 +1135,15 @@ function Relatorios() {
                                                 <AreaChart data={reportData.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                                     <defs>
                                                         <linearGradient id="relGradient" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
-                                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                                                            <stop offset="5%" stopColor="#1570EF" stopOpacity={0.25} />
+                                                            <stop offset="95%" stopColor="#1570EF" stopOpacity={0} />
                                                         </linearGradient>
                                                     </defs>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                                                     <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `R$${v}`} />
                                                     <Tooltip content={<ChartTooltip />} />
-                                                    <Area type="monotone" dataKey={reportData.chartData[0]?.receita !== undefined ? 'receita' : 'valor'} stroke="#2563eb" strokeWidth={2.5} fill="url(#relGradient)" dot={false} activeDot={{ r: 5, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }} />
+                                                    <Area type="monotone" dataKey={reportData.chartData[0]?.receita !== undefined ? 'receita' : 'valor'} stroke="#1570EF" strokeWidth={2.5} fill="url(#relGradient)" dot={false} activeDot={{ r: 5, fill: '#1570EF', stroke: '#fff', strokeWidth: 2 }} />
                                                 </AreaChart>
                                             </ResponsiveContainer>
                                         )}

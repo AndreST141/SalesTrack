@@ -46,7 +46,7 @@
 .body-modal .modal-container .modal-header h2 {
     font-size: 17px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     letter-spacing: -0.3px;
     margin: 0;
 }
@@ -76,7 +76,7 @@
 }
 
 .body-modal .modal-container .modal-header .modal-close:hover svg {
-    color: #0f172a;
+    color: #07142B;
 }
 
 /* ── Body ─────────────────────────────────────────────────────────────── */
@@ -155,7 +155,7 @@
     padding: 10px 20px;
     border: none;
     border-radius: 10px;
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
     font-size: 14px;
     font-weight: 600;
@@ -165,7 +165,7 @@
 }
 
 .body-modal .modal-container .modal-footer .btn-modal-confirm:hover {
-    background: #1d4ed8;
+    background: #0C56C9;
 }
 
 .body-modal .modal-container .modal-footer .btn-modal-danger {
@@ -207,7 +207,7 @@
     border-radius: 10px;
     font-size: 14px;
     font-family: inherit;
-    color: #1e293b;
+    color: #0B2447;
     transition: border-color 0.2s;
     box-sizing: border-box;
     background: #fff;
@@ -217,7 +217,7 @@
 .body-modal .modal-container .modal-body .form-group select:focus,
 .body-modal .modal-container .modal-body .form-group textarea:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 .body-modal .modal-container .modal-body .form-group textarea {
@@ -271,7 +271,7 @@
 
 .body-modal .modal-container .modal-body .detail-row .detail-value {
     font-size: 14px;
-    color: #1e293b;
+    color: #0B2447;
     font-weight: 600;
 }
 
@@ -282,7 +282,7 @@
 .body-modal .modal-container .modal-body .detail-section h3 {
     font-size: 14px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     margin-bottom: 12px;
 }
 

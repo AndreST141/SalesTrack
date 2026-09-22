@@ -28,7 +28,7 @@
 .body-clientes .content-clientes .title-page h1 {
     font-size: 22px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     letter-spacing: -0.3px;
 }
 
@@ -79,7 +79,7 @@
 .convenio-toggle-label {
     font-size: 14px;
     font-weight: 600;
-    color: #1e293b;
+    color: #0B2447;
 }
 
 .convenio-toggle-desc {
@@ -280,7 +280,7 @@
 }
 
 .convenio-card-limite {
-    background: #eff6ff;
+    background: #E6F1FB;
     border: 1px solid #bfdbfe;
 }
 
@@ -300,7 +300,7 @@
 .convenio-card-valor {
     font-size: 20px;
     font-weight: 800;
-    color: #1e293b;
+    color: #0B2447;
     line-height: 1.2;
 }
 
@@ -352,7 +352,7 @@
     justify-content: space-between;
     font-size: 13px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     margin-bottom: 10px;
     margin-top: 8px;
 }
@@ -395,7 +395,7 @@
 .convenio-table tbody td {
     padding: 10px 14px;
     font-size: 13px;
-    color: #1e293b;
+    color: #0B2447;
     border-bottom: 1px solid #f1f5f9;
 }
 
@@ -416,7 +416,7 @@
     padding: 5px 14px;
     border: none;
     border-radius: 8px;
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
     font-size: 12px;
     font-weight: 600;
@@ -425,7 +425,7 @@
     transition: background 0.2s;
 }
 
-.btn-pagar-item:hover { background: #1d4ed8; }
+.btn-pagar-item:hover { background: #0C56C9; }
 
 /* ── Botão pagar tudo ── */
 .btn-pagar-tudo {
@@ -469,7 +469,7 @@
 .pagamento-convenio-cliente {
     font-size: 15px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
 }
 
 .pagamento-convenio-valor {
