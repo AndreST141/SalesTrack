@@ -52,10 +52,32 @@ CREATE TABLE IF NOT EXISTS Produto (
     preco DECIMAL(10,2) NOT NULL,
     estoque INT DEFAULT 0,
     idCategoria INT,
+    codigoBarras VARCHAR(50) DEFAULT NULL,
     ativo BOOLEAN DEFAULT TRUE,
     dataCadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration: adiciona codigoBarras caso o banco já exista sem a coluna
+-- (MySQL não aceita "ADD COLUMN IF NOT EXISTS" diretamente; usa-se o mesmo
+-- padrão de procedure condicional já usado mais abaixo para os índices)
+DROP PROCEDURE IF EXISTS sp_add_codigo_barras;
+DELIMITER //
+CREATE PROCEDURE sp_add_codigo_barras()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME   = 'Produto'
+          AND COLUMN_NAME  = 'codigoBarras'
+    ) THEN
+        ALTER TABLE Produto ADD COLUMN codigoBarras VARCHAR(50) DEFAULT NULL;
+    END IF;
+END //
+DELIMITER ;
+
+CALL sp_add_codigo_barras();
+DROP PROCEDURE IF EXISTS sp_add_codigo_barras;
 
 -- Tabela de Vendas
 CREATE TABLE IF NOT EXISTS Venda (

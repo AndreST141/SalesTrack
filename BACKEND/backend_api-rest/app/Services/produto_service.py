@@ -12,19 +12,26 @@ class ProdutoService:
 
     @staticmethod
     def create(dados):
-        if not dados.get('nome') or not dados.get('preco'):
-            return {'status': 400, 'error': 'Nome e preço são obrigatórios.'}
+        if not dados.get('nome') or not ProdutoService._preco_valido(dados.get('preco')):
+            return {'status': 400, 'error': 'Nome e um preço maior que zero são obrigatórios.'}
 
         produto_id = ProdutoRepository.create(dados)
         return {'status': 201, 'message': Geral.PRODUTO_CADASTRADO, 'id': produto_id}
 
     @staticmethod
     def update(id, dados):
-        if not dados.get('nome') or not dados.get('preco'):
-            return {'status': 400, 'error': 'Nome e preço são obrigatórios.'}
+        if not dados.get('nome') or not ProdutoService._preco_valido(dados.get('preco')):
+            return {'status': 400, 'error': 'Nome e um preço maior que zero são obrigatórios.'}
 
         ProdutoRepository.update(id, dados)
         return {'status': 200, 'message': Geral.PRODUTO_ATUALIZADO}
+
+    @staticmethod
+    def _preco_valido(preco):
+        try:
+            return float(preco) > 0
+        except (TypeError, ValueError):
+            return False
 
     @staticmethod
     def delete(id):

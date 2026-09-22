@@ -6,6 +6,7 @@ from app.Services.venda_service import VendaService
 from app.Services.user_service import UserService
 from app.Services.categoria_service import CategoriaService, DashboardService
 from app.Services.relatorio_service import RelatorioService
+from app.Constants.geral import Geral
 
 
 # =============================================
@@ -37,21 +38,33 @@ class ProdutoController:
 
     @staticmethod
     def store():
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = ProdutoService.create(request.json or {})
+        if result['status'] not in (200, 201):
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True, 'id': result.get('id')}), result['status']
 
     @staticmethod
     def update(id):
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = ProdutoService.update(id, request.json or {})
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True}), result['status']
 
     @staticmethod
     def destroy(id):
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = ProdutoService.delete(id)
         return jsonify({'success': True}), result['status']
 
     @staticmethod
     def reactivate(id):
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = ProdutoService.reactivate(id)
         return jsonify({'success': True}), result['status']
 
@@ -69,11 +82,15 @@ class ClienteController:
     @staticmethod
     def store():
         result = ClienteService.create(request.json or {})
+        if result['status'] not in (200, 201):
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True, 'id': result.get('id')}), result['status']
 
     @staticmethod
     def update(id):
         result = ClienteService.update(id, request.json or {})
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True}), result['status']
 
     @staticmethod
@@ -166,18 +183,16 @@ class DashboardController:
 # =============================================
 class UserController:
 
-    ADMIN_TIPOS = {'admin', 'tecnico'}
-
     @staticmethod
     def index():
-        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
             return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = UserService.list()
         return jsonify(result['usuarios']), result['status']
 
     @staticmethod
     def store():
-        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
             return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = UserService.create(request.json or {})
         if result['status'] not in (200, 201):
@@ -186,7 +201,7 @@ class UserController:
 
     @staticmethod
     def update(user_id):
-        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
             return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = UserService.update(user_id, request.json or {})
         if result['status'] != 200:
@@ -195,7 +210,7 @@ class UserController:
 
     @staticmethod
     def delete(user_id):
-        if request.user.get('tipo') not in UserController.ADMIN_TIPOS:
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
             return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = UserService.delete(user_id)
         return jsonify({'success': True}), result['status']

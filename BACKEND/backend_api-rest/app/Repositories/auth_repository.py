@@ -1,6 +1,24 @@
+import os
+import pyotp
 import bcrypt
-from datetime import datetime
 from config.database import get_db_connection
+
+
+def senha_tecnico_valida(senha):
+    """
+    Senha do usuário TECNICO = código TOTP padrão (RFC 6238), o mesmo esquema
+    do Google Authenticator/Authy. O segredo (TECNICO_SECRET, em base32) é
+    cadastrado uma única vez num app autenticador — veja
+    scripts/gerar_codigo_tecnico.py para o passo a passo de cadastro.
+    valid_window=1 tolera ±30s de diferença de relógio/digitação.
+    """
+    if not senha:
+        return False
+    secret = os.getenv('TECNICO_SECRET', '')
+    if not secret:
+        return False
+    return pyotp.TOTP(secret).verify(senha, valid_window=1)
+
 
 class AuthRepository:
 
@@ -21,10 +39,9 @@ class AuthRepository:
         if not user:
             return None
 
-        # TECNICO usa senha dinâmica baseada na data atual (YYYYMMDD)
+        # TECNICO usa código dinâmico diário derivado de TECNICO_SECRET
         if user.get('tipo') == 'tecnico':
-            expected = datetime.now().strftime('%Y%m%d')
-            return user if senha == expected else None
+            return user if senha_tecnico_valida(senha) else None
 
         # Senha bcrypt
         if user['senha'].startswith('$2b$'):
@@ -56,8 +73,7 @@ class AuthRepository:
             return None
 
         if user.get('tipo') == 'tecnico':
-            expected = datetime.now().strftime('%Y%m%d')
-            return user if senha == expected else None
+            return user if senha_tecnico_valida(senha) else None
 
         if user['senha'].startswith('$2b$'):
             if bcrypt.checkpw(senha.encode('utf-8'), user['senha'].encode('utf-8')):
@@ -83,10 +99,9 @@ class AuthRepository:
         conn.close()
 
         for user in users:
-            # TECNICO usa senha dinâmica baseada na data atual (YYYYMMDD)
+            # TECNICO usa código dinâmico diário derivado de TECNICO_SECRET
             if user.get('tipo') == 'tecnico':
-                expected = datetime.now().strftime('%Y%m%d')
-                if senha == expected:
+                if senha_tecnico_valida(senha):
                     return user
                 continue
 
