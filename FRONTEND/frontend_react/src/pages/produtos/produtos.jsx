@@ -70,7 +70,7 @@ function Produtos() {
         setForm({
             nome: produto.nome || '',
             descricao: produto.descricao || '',
-            preco: produto.preco || '',
+            preco: produto.preco ? parseFloat(produto.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
             estoque: produto.estoque || '',
             idCategoria: produto.idCategoria || '',
             codigoBarras: produto.codigoBarras || '',
@@ -79,19 +79,24 @@ function Produtos() {
     }
 
     async function salvarProduto() {
-        if (!form.nome || !form.preco || parseFloat(form.preco) <= 0) {
+        const precoNum = parsePreco(form.preco);
+        if (!form.nome || precoNum <= 0) {
             showNotification('Preencha o nome e um preço válido (maior que zero)', 'warning');
             return;
         }
 
         setSalvando(true);
         try {
+            const idCategoriaFinal = form.idCategoria
+                || categorias.find(c => c.nome === 'Outros')?.idCategoria
+                || null;
+
             const dados = {
                 nome: form.nome,
                 descricao: form.descricao || '',
-                preco: parseFloat(form.preco),
+                preco: precoNum,
                 estoque: parseInt(form.estoque) || 0,
-                idCategoria: form.idCategoria || null,
+                idCategoria: idCategoriaFinal,
                 codigoBarras: form.codigoBarras || null,
             };
 
@@ -138,7 +143,22 @@ function Produtos() {
         }
     }
 
+    function formatPreco(value) {
+        const onlyNums = String(value).replace(/\D/g, '');
+        if (!onlyNums) return '';
+        const numeric = parseInt(onlyNums, 10) / 100;
+        return numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function parsePreco(str) {
+        return parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
     function handleFormChange(field, value) {
+        if (field === 'preco') {
+            setForm((prev) => ({ ...prev, preco: formatPreco(value) }));
+            return;
+        }
         setForm((prev) => ({ ...prev, [field]: value }));
     }
 
@@ -184,7 +204,7 @@ function Produtos() {
         {
             key: 'categoriaNome',
             label: 'Categoria',
-            render: (val) => val || '-',
+            render: (val) => val || 'Outros',
         },
         {
             key: 'preco',
@@ -299,8 +319,8 @@ function Produtos() {
                         <div className="form-group">
                             <label>Preço *</label>
                             <input
-                                type="number"
-                                step="0.01"
+                                type="text"
+                                inputMode="numeric"
                                 value={form.preco}
                                 onChange={(e) => handleFormChange('preco', e.target.value)}
                                 placeholder="0,00"

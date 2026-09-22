@@ -21,7 +21,7 @@
 }
 
 .body-table .table-header-bar .table-search:focus-within {
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 .body-table .table-header-bar .table-search .search-icon {
@@ -35,7 +35,7 @@
     border: none;
     outline: none;
     font-size: 14px;
-    color: #1e293b;
+    color: #0B2447;
     width: 100%;
     background: transparent;
     font-family: inherit;
@@ -58,7 +58,7 @@
     padding: 10px 18px;
     border: none;
     border-radius: 10px;
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
     font-size: 14px;
     font-weight: 600;
@@ -69,7 +69,7 @@
 }
 
 .body-table .table-header-bar .table-header-actions .btn-primary:hover {
-    background: #1d4ed8;
+    background: #0C56C9;
     transform: translateY(-1px);
 }
 
@@ -116,8 +116,8 @@
 
 .body-table .table-header-bar .table-header-actions .btn-filter:hover {
     background: #f8fafc;
-    border-color: #2563eb;
-    color: #2563eb;
+    border-color: #1570EF;
+    color: #1570EF;
 }
 
 .body-table .table-header-bar .table-header-actions .btn-filter .filter-badge-count {
@@ -127,7 +127,7 @@
     min-width: 18px;
     height: 18px;
     border-radius: 10px;
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -183,12 +183,12 @@
 }
 
 .body-table .table-wrapper .table-scroll-area .table thead th.th-sortable:hover {
-    color: #2563eb;
+    color: #1570EF;
     background: #eef2ff;
 }
 
 .body-table .table-wrapper .table-scroll-area .table thead th.th-sorted {
-    color: #2563eb;
+    color: #1570EF;
     background: #eef2ff;
 }
 
@@ -210,7 +210,7 @@
 
 .body-table .table-wrapper .table-scroll-area .table thead th.th-sorted .sort-icon {
     opacity: 1;
-    color: #2563eb;
+    color: #1570EF;
 }
 
 .body-table .table-wrapper .table-scroll-area .table thead .th-acoes {
@@ -222,7 +222,7 @@
 .body-table .table-wrapper .table-scroll-area .table tbody td {
     padding: 12px 16px;
     font-size: 14px;
-    color: #1e293b;
+    color: #0B2447;
     font-weight: 500;
     border-bottom: 1px solid #f1f5f9;
     white-space: nowrap;
@@ -268,9 +268,9 @@
 }
 
 .body-table .table-wrapper .table-scroll-area .table tbody .acoes .btn-action:hover {
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
-    border-color: #2563eb;
+    border-color: #1570EF;
 }
 
 .body-table .table-wrapper .table-scroll-area .table tbody .acoes .btn-action.btn-danger {
@@ -340,11 +340,11 @@
 
 .body-table .table-wrapper .table-footer .pagination button:hover:not(:disabled) {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #0B2447;
 }
 
 .body-table .table-wrapper .table-footer .pagination button.active {
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
 }
 
@@ -390,8 +390,8 @@
 }
 
 .badge-info {
-    background: #eff6ff;
-    color: #2563eb;
+    background: #E6F1FB;
+    color: #1570EF;
 }
 
 .badge-neutral {

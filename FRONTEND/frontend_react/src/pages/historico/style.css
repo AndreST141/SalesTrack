@@ -27,7 +27,7 @@
 .body-historico .content-historico .title-page h1 {
     font-size: 22px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     letter-spacing: -0.3px;
 }
 
@@ -59,7 +59,7 @@
 .detail-items-table td {
     padding: 8px 12px;
     font-size: 13px;
-    color: #1e293b;
+    color: #0B2447;
     font-weight: 500;
     border-bottom: 1px solid #f1f5f9;
 }
@@ -93,5 +93,5 @@
 .detail-pagamento-valor {
     font-size: 13px;
     font-weight: 600;
-    color: #1e293b;
+    color: #0B2447;
 }

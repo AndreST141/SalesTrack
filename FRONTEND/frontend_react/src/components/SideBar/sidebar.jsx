@@ -1,25 +1,85 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import Dashboard from "../../assets/sidebar/dashboard.svg";
-import Vendas from "../../assets/sidebar/vendas.svg";
-import Historico from "../../assets/sidebar/historico.svg";
-import Produtos from "../../assets/sidebar/produtos.svg";
-import Clientes from "../../assets/sidebar/clientes.svg";
-import Relatorios from "../../assets/sidebar/relatorios.svg";
-import ConfigIcon from "../../assets/sidebar/configuracoes.svg";
-import SalesTrack from "../../assets/salesTrack.svg";
 import './style.css';
+
+const ICONS = {
+    dashboard: (
+        <>
+            <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
+            <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" />
+            <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
+            <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
+        </>
+    ),
+    vendas: (
+        <>
+            <circle cx="9" cy="20" r="1.4" />
+            <circle cx="18" cy="20" r="1.4" />
+            <path d="M2.5 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6" />
+        </>
+    ),
+    historico: (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7.5v5l3.5 2" />
+        </>
+    ),
+    produtos: (
+        <>
+            <path d="M21 7.5l-9-5-9 5 9 5 9-5z" />
+            <path d="M3 7.5v8.7l9 5 9-5V7.5" />
+            <path d="M12 12.5v8.7" />
+        </>
+    ),
+    clientes: (
+        <>
+            <circle cx="9.5" cy="8" r="3.3" />
+            <path d="M3.5 20v-1.2A4.3 4.3 0 0 1 7.8 14.5h3.4a4.3 4.3 0 0 1 4.3 4.3V20" />
+            <path d="M16.2 4.8a3.3 3.3 0 0 1 0 6.4" />
+            <path d="M20.5 20v-1.2a4.3 4.3 0 0 0-3-4.1" />
+        </>
+    ),
+    relatorios: (
+        <>
+            <line x1="5" y1="20" x2="5" y2="11" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="19" y1="20" x2="19" y2="15" />
+        </>
+    ),
+    configuracoes: (
+        <>
+            <circle cx="12" cy="12" r="3.2" />
+            <path d="M19.4 13.6a7.8 7.8 0 0 0 0-3.2l2-1.5-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1l-.3-2.6h-6l-.3 2.6a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 3.2l-2 1.5 2 3.4 2.4-1a7.8 7.8 0 0 0 1.7 1l.3 2.6h6l.3-2.6a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.4z" />
+        </>
+    ),
+};
+
+function MenuIcon({ name }) {
+    return (
+        <svg className="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {ICONS[name]}
+        </svg>
+    );
+}
 
 function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
     const [itemActive, setItemActive] = useState(location.pathname);
+    const [expanded, setExpanded] = useState(false);
 
     const handleItemClick = (path) => {
+        setExpanded(false);
         setItemActive(path);
         navigate(path);
+    };
+
+    const handleBlurContainer = (e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            setExpanded(false);
+        }
     };
 
     async function handleLogout() {
@@ -42,11 +102,22 @@ function Sidebar() {
     const isVendedor = user?.tipo === 'vendedor';
 
     return (
-        <div className="body-sidebar">
-            <div className="box-vertical">
+        <div className={`body-sidebar ${expanded ? 'is-expanded' : ''}`}>
+            <div
+                className={`box-vertical ${expanded ? 'is-expanded' : ''}`}
+                onMouseEnter={() => setExpanded(true)}
+                onMouseLeave={() => setExpanded(false)}
+                onFocus={() => setExpanded(true)}
+                onBlur={handleBlurContainer}
+            >
                 <div className="header-dashboard">
                     <div className="logo">
-                        <img src={SalesTrack} alt="" className="salesTrack-img" />
+                        <div className="logo-mark" aria-hidden="true">
+                            <span style={{ height: 6 }}></span>
+                            <span style={{ height: 11 }}></span>
+                            <span style={{ height: 9 }}></span>
+                            <span style={{ height: 15 }}></span>
+                        </div>
                         <h1>SalesTrack</h1>
                     </div>
                     <hr />
@@ -54,35 +125,35 @@ function Sidebar() {
                 <div className="sidebar-menu">
                     {!isVendedor && (
                         <div className={`menu-select ${itemActive === '/dashboard' ? 'ativo' : ''}`} onClick={() => handleItemClick('/dashboard')}>
-                            <img src={Dashboard} alt="" />
+                            <MenuIcon name="dashboard" />
                             <span>Dashboard</span>
                         </div>
                     )}
                     <div className={`menu-select ${itemActive === '/vendas' ? 'ativo' : ''}`} onClick={() => handleItemClick('/vendas')}>
-                        <img src={Vendas} alt="" />
+                        <MenuIcon name="vendas" />
                         <span>Nova Venda</span>
                     </div>
                     <div className={`menu-select ${itemActive === '/historico' ? 'ativo' : ''}`} onClick={() => handleItemClick('/historico')}>
-                        <img src={Historico} alt="" />
+                        <MenuIcon name="historico" />
                         <span>Histórico</span>
                     </div>
                     <div className={`menu-select ${itemActive === '/produtos' ? 'ativo' : ''}`} onClick={() => handleItemClick('/produtos')}>
-                        <img src={Produtos} alt="" />
+                        <MenuIcon name="produtos" />
                         <span>Produtos</span>
                     </div>
                     <div className={`menu-select ${itemActive === '/clientes' ? 'ativo' : ''}`} onClick={() => handleItemClick('/clientes')}>
-                        <img src={Clientes} alt="" />
+                        <MenuIcon name="clientes" />
                         <span>Clientes</span>
                     </div>
                     {isAdminOrTecnico && (
                         <div className={`menu-select ${itemActive === '/relatorios' ? 'ativo' : ''}`} onClick={() => handleItemClick('/relatorios')}>
-                            <img src={Relatorios} alt="" />
+                            <MenuIcon name="relatorios" />
                             <span>Relatórios</span>
                         </div>
                     )}
                     {isAdminOrTecnico && (
                         <div className={`menu-select ${itemActive === '/configuracoes' ? 'ativo' : ''}`} onClick={() => handleItemClick('/configuracoes')}>
-                            <img src={ConfigIcon} alt="" />
+                            <MenuIcon name="configuracoes" />
                             <span>Configurações</span>
                         </div>
                     )}

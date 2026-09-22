@@ -27,7 +27,7 @@
 .body-configuracoes .content-configuracoes .title-page h1 {
     font-size: 22px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     letter-spacing: -0.3px;
 }
 
@@ -62,7 +62,7 @@
 .config-card .config-card-header .config-card-icon {
     width: 42px;
     height: 42px;
-    background: #eff6ff;
+    background: #E6F1FB;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -73,13 +73,13 @@
 .config-card .config-card-header .config-card-icon svg {
     width: 20px;
     height: 20px;
-    color: #2563eb;
+    color: #1570EF;
 }
 
 .config-card .config-card-header h2 {
     font-size: 15px;
     font-weight: 700;
-    color: #0f172a;
+    color: #07142B;
     margin: 0;
 }
 
@@ -168,8 +168,8 @@
 .config-card .config-field input:focus,
 .config-card .config-field select:focus {
     outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    border-color: #1570EF;
+    box-shadow: 0 0 0 3px rgba(21, 112, 239, 0.1);
 }
 
 .config-card .config-field input[readonly] {
@@ -226,7 +226,7 @@
     width: 16px;
     height: 16px;
     border: 2px solid #e2e8f0;
-    border-top: 2px solid #2563eb;
+    border-top: 2px solid #1570EF;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
 }
@@ -275,7 +275,7 @@
     align-items: center;
     gap: 8px;
     padding: 10px 24px;
-    background: #2563eb;
+    background: #1570EF;
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -287,7 +287,7 @@
 }
 
 .btn-primary:hover {
-    background: #1d4ed8;
+    background: #0C56C9;
 }
 
 .btn-primary:active {
@@ -321,11 +321,11 @@
 
 .btn-secondary--import {
     border-color: #dbeafe;
-    color: #2563eb;
+    color: #1570EF;
 }
 
 .btn-secondary--import:hover {
-    background: #eff6ff;
+    background: #E6F1FB;
     border-color: #93c5fd;
 }
 
@@ -408,7 +408,7 @@
 .config-toggle-label {
     font-size: 13px;
     font-weight: 600;
-    color: #0f172a;
+    color: #07142B;
 }
 
 .config-toggle-desc {

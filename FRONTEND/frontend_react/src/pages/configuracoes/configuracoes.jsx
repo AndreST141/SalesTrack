@@ -827,7 +827,7 @@ function Configuracoes() {
                                                 </span>
                                             </td>
                                             <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                                                <button onClick={() => abrirEditar(u)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px 6px', borderRadius: '6px' }}>
+                                                <button onClick={() => abrirEditar(u)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1570EF', padding: '4px 6px', borderRadius: '6px' }}>
                                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
                                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />

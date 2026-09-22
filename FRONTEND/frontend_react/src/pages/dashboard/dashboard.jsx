@@ -66,7 +66,7 @@ function BarTooltip({ active, payload, label }) {
 }
 
 const PIE_COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b'];
-const BAR_COLORS = ['#2563eb', '#7c3aed', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e', '#6366f1'];
+const BAR_COLORS = ['#1570EF', '#7c3aed', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e', '#6366f1'];
 
 const PAYMENT_LABELS = {
   dinheiro: 'Dinheiro',
@@ -257,8 +257,8 @@ function Dashboard() {
                     <AreaChart data={vendas} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#2563eb" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                          <stop offset="5%"  stopColor="#1570EF" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#1570EF" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -278,11 +278,11 @@ function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="receita"
-                        stroke="#2563eb"
+                        stroke="#1570EF"
                         strokeWidth={2.5}
                         fill="url(#colorReceita)"
                         dot={false}
-                        activeDot={{ r: 5, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: '#1570EF', stroke: '#fff', strokeWidth: 2 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -397,7 +397,7 @@ function Dashboard() {
                       <Tooltip content={<BarTooltip />} />
                       <Bar
                         dataKey="receita"
-                        fill="#2563eb"
+                        fill="#1570EF"
                         radius={[8, 8, 0, 0]}
                         maxBarSize={50}
                       >
