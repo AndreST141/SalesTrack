@@ -40,7 +40,8 @@
 .body-sidebar .box-vertical .header-dashboard .logo{
     display: flex;
     align-items: center;
-    padding: 25px;
+    padding: 0px 20px 0px 20px;
+    height: 7vh;
     gap: 4px;
 }
 

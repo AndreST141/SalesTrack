@@ -1,10 +1,10 @@
-.body-produtos {
+.body-licenca {
     display: flex;
     width: 100%;
     min-height: 100vh;
 }
 
-.body-produtos .content-produtos {
+.body-licenca .content-licenca {
     flex: 1;
     background-color: #f8fafc;
     display: flex;
@@ -13,7 +13,7 @@
 }
 
 /* ── Header ───────────────────────────────────────────────────────── */
-.body-produtos .content-produtos .title-page {
+.body-licenca .content-licenca .title-page {
     display: flex;
     height: 7vh;
     align-items: center;
@@ -24,14 +24,14 @@
     flex-shrink: 0;
 }
 
-.body-produtos .content-produtos .title-page h1 {
+.body-licenca .content-licenca .title-page h1 {
     font-size: 18px;
     font-weight: 700;
     color: #07142B;
     letter-spacing: -0.3px;
 }
 
-.body-produtos .content-produtos .title-page span {
+.body-licenca .content-licenca .title-page span {
     font-size: 13px;
     color: #94a3b8;
     font-weight: 400;
@@ -39,8 +39,12 @@
 }
 
 /* ── Body ─────────────────────────────────────────────────────────── */
-.body-produtos .content-produtos .produtos-body {
+.body-licenca .content-licenca .licenca-body {
     padding: 24px 28px;
     overflow-y: auto;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 720px;
 }

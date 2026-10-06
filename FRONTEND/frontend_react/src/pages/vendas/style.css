@@ -15,7 +15,7 @@
 /* ── Header ───────────────────────────────────────────────────────── */
 .body-vendas .content-vendas .title-page {
     display: flex;
-    height: 9vh;
+    height: 7vh;
     align-items: center;
     justify-content: space-between;
     padding: 0 28px;
@@ -25,7 +25,7 @@
 }
 
 .body-vendas .content-vendas .title-page h1 {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
     color: #07142B;
     letter-spacing: -0.3px;

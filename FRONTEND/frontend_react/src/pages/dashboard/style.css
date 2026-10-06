@@ -15,7 +15,7 @@
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .body-dashboard .content-dashboard .title-page {
     display: flex;
-    height: 9vh;
+    height: 7vh;
     align-items: center;
     justify-content: space-between;
     padding: 0 28px;
@@ -25,7 +25,7 @@
 }
 
 .body-dashboard .content-dashboard .title-page h1 {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
     color: #07142B;
     letter-spacing: -0.3px;
@@ -59,7 +59,7 @@
 .body-dashboard .content-dashboard .dashboard-body .kpi-grid .kpi-card {
     background: #fff;
     border-radius: 14px;
-    padding: 22px 22px;
+    padding: 14px 22px;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -74,8 +74,8 @@
 }
 
 .body-dashboard .content-dashboard .dashboard-body .kpi-grid .kpi-card .kpi-icon {
-    width: 56px;
-    height: 56px;
+    width: 45px;
+    height: 45px;
     border-radius: 12px;
     background: color-mix(in srgb, var(--accent) 12%, transparent);
     display: flex;
@@ -85,8 +85,8 @@
 }
 
 .body-dashboard .content-dashboard .dashboard-body .kpi-grid .kpi-card .kpi-icon svg {
-    width: 25px;
-    height: 25px;
+    width: 15px;
+    height: 15px;
     color: var(--accent);
     stroke: var(--accent);
 }
@@ -98,16 +98,16 @@
 }
 
 .body-dashboard .content-dashboard .dashboard-body .kpi-grid .kpi-card .kpi-info .kpi-label {
-    font-size: 12px;
+    font-size: 10px;
     color: #94a3b8;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding-bottom: 8px;
+    padding-bottom: 4px;
 }
 
 .body-dashboard .content-dashboard .dashboard-body .kpi-grid .kpi-card .kpi-info .kpi-value {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: -0.5px;
     line-height: 1;

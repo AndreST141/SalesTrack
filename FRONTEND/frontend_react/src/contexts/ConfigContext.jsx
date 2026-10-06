@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import StorageService from '../services/storageService';
+import api from '../services/api';
 
 const FORMAS_PADRAO = [
     { value: 'dinheiro',       label: 'Dinheiro',        icon: '💵', shortcut: 'F1' },
@@ -85,14 +86,48 @@ export function ConfigProvider({ children }) {
         StorageService.set('permiteExcluir', valor);
     }, []);
 
-    const setPermiteEstoqueNegativo = useCallback((valor) => {
+    // permiteEstoqueNegativo é uma configuração do sistema (compartilhada entre
+    // todos os usuários/dispositivos) — vive no backend (tabela Configuracao).
+    // O localStorage é usado só como cache para não haver "flash" de valor
+    // padrão antes da resposta do servidor chegar.
+    const setPermiteEstoqueNegativo = useCallback(async (valor) => {
         setPermiteEstoqueNegativoState(valor);
         StorageService.set('permiteEstoqueNegativo', valor);
+        await api.put('/configuracoes', { permiteEstoqueNegativo: valor });
     }, []);
 
-    const setDadosEmpresa = useCallback((dados) => {
+    const sincronizarConfiguracoesDoServidor = useCallback(async () => {
+        try {
+            const res = await api.get('/configuracoes');
+            if (typeof res.data?.permiteEstoqueNegativo === 'boolean') {
+                setPermiteEstoqueNegativoState(res.data.permiteEstoqueNegativo);
+                StorageService.set('permiteEstoqueNegativo', res.data.permiteEstoqueNegativo);
+            }
+            if (res.data?.dadosEmpresa && typeof res.data.dadosEmpresa === 'object') {
+                setDadosEmpresaState(res.data.dadosEmpresa);
+                StorageService.set('dadosEmpresa', res.data.dadosEmpresa);
+            }
+        } catch (err) {
+            console.error('Erro ao sincronizar configurações do servidor:', err);
+        }
+    }, []);
+
+    // Ao carregar a aplicação com um token já salvo (F5 na página, por exemplo),
+    // busca a configuração real do servidor por cima do cache local.
+    useEffect(() => {
+        if (localStorage.getItem('token')) {
+            sincronizarConfiguracoesDoServidor();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // dadosEmpresa também é uma configuração do sistema (não do navegador) —
+    // mesma lógica de permiteEstoqueNegativo: otimista localmente + persiste
+    // no backend, para valer para todos os usuários/dispositivos da instalação.
+    const setDadosEmpresa = useCallback(async (dados) => {
         setDadosEmpresaState(dados);
         StorageService.set('dadosEmpresa', dados);
+        await api.put('/configuracoes', { dadosEmpresa: dados });
     }, []);
 
     const setConfigImpressora = useCallback((config) => {
@@ -114,6 +149,7 @@ export function ConfigProvider({ children }) {
             setPermiteExcluir,
             permiteEstoqueNegativo,
             setPermiteEstoqueNegativo,
+            sincronizarConfiguracoesDoServidor,
             dadosEmpresa,
             setDadosEmpresa,
             configImpressora,

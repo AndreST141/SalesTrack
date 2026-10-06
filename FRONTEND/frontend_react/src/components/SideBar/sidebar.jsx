@@ -53,6 +53,12 @@ const ICONS = {
             <path d="M19.4 13.6a7.8 7.8 0 0 0 0-3.2l2-1.5-2-3.4-2.4 1a7.8 7.8 0 0 0-1.7-1l-.3-2.6h-6l-.3 2.6a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 3.2l-2 1.5 2 3.4 2.4-1a7.8 7.8 0 0 0 1.7 1l.3 2.6h6l.3-2.6a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.4z" />
         </>
     ),
+    licenca: (
+        <>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M7.8 4.7a3.4 3.4 0 0 0 1.9-.8 3.4 3.4 0 0 1 4.4 0 3.4 3.4 0 0 0 1.9.8 3.4 3.4 0 0 1 3.1 3.1 3.4 3.4 0 0 0 .8 1.9 3.4 3.4 0 0 1 0 4.4 3.4 3.4 0 0 0-.8 1.9 3.4 3.4 0 0 1-3.1 3.1 3.4 3.4 0 0 0-1.9.8 3.4 3.4 0 0 1-4.4 0 3.4 3.4 0 0 0-1.9-.8 3.4 3.4 0 0 1-3.1-3.1 3.4 3.4 0 0 0-.8-1.9 3.4 3.4 0 0 1 0-4.4 3.4 3.4 0 0 0 .8-1.9 3.4 3.4 0 0 1 3.1-3.1z" />
+        </>
+    ),
 };
 
 function MenuIcon({ name }) {
@@ -100,6 +106,7 @@ function Sidebar() {
 
     const isAdminOrTecnico = ['admin', 'tecnico'].includes(user?.tipo);
     const isVendedor = user?.tipo === 'vendedor';
+    const isTecnico = user?.tipo === 'tecnico';
 
     return (
         <div className={`body-sidebar ${expanded ? 'is-expanded' : ''}`}>
@@ -155,6 +162,12 @@ function Sidebar() {
                         <div className={`menu-select ${itemActive === '/configuracoes' ? 'ativo' : ''}`} onClick={() => handleItemClick('/configuracoes')}>
                             <MenuIcon name="configuracoes" />
                             <span>Configurações</span>
+                        </div>
+                    )}
+                    {isTecnico && (
+                        <div className={`menu-select ${itemActive === '/licenca' ? 'ativo' : ''}`} onClick={() => handleItemClick('/licenca')}>
+                            <MenuIcon name="licenca" />
+                            <span>Licença</span>
                         </div>
                     )}
                 </div>

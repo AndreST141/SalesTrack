@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import api from '../services/api';
+import { useConfig } from './ConfigContext';
 
 const AuthContext = createContext(null);
 
@@ -13,6 +14,8 @@ export function AuthProvider({ children }) {
     return localStorage.getItem('token') || null;
   });
 
+  const { sincronizarConfiguracoesDoServidor } = useConfig();
+
   const signed = !!token;
 
   async function login(email, senha) {
@@ -24,6 +27,10 @@ export function AuthProvider({ children }) {
 
     setToken(newToken);
     setUser(userData);
+
+    // Busca as configurações reais do servidor assim que loga (antes disso
+    // não havia token para autenticar a chamada)
+    sincronizarConfiguracoesDoServidor();
 
     return userData;
   }
