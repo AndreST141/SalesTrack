@@ -6,6 +6,8 @@ from app.Services.venda_service import VendaService
 from app.Services.user_service import UserService
 from app.Services.categoria_service import CategoriaService, DashboardService
 from app.Services.relatorio_service import RelatorioService
+from app.Services.configuracao_service import ConfiguracaoService
+from app.Services.licenca_service import LicencaService
 from app.Constants.geral import Geral
 
 
@@ -123,6 +125,8 @@ class VendaController:
     @staticmethod
     def store():
         result = VendaService.create(request.json or {}, request.user['id'])
+        if result['status'] not in (200, 201):
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True, 'id': result.get('id')}), result['status']
 
     @staticmethod
@@ -214,6 +218,44 @@ class UserController:
             return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = UserService.delete(user_id)
         return jsonify({'success': True}), result['status']
+
+
+# =============================================
+# ConfiguracaoController
+# =============================================
+class ConfiguracaoController:
+    @staticmethod
+    def index():
+        result = ConfiguracaoService.listar()
+        return jsonify(result['configuracoes']), result['status']
+
+    @staticmethod
+    def update():
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = ConfiguracaoService.atualizar(request.json or {})
+        return jsonify(result['configuracoes']), result['status']
+
+
+# =============================================
+# LicencaController
+# =============================================
+class LicencaController:
+    @staticmethod
+    def index():
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = LicencaService.obter()
+        return jsonify(result['licenca']), result['status']
+
+    @staticmethod
+    def update():
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = LicencaService.atualizar(request.json or {})
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify(result['licenca']), result['status']
 
 
 # =============================================

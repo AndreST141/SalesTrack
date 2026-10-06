@@ -2,7 +2,8 @@ from flask import Blueprint
 from app.Http.Controllers.controllers import (
     AuthController, ProdutoController, ClienteController,
     VendaController, CategoriaController, DashboardController,
-    UserController, RelatorioController,
+    UserController, RelatorioController, ConfiguracaoController,
+    LicencaController,
 )
 from middlewares.auth_middleware import token_required
 
@@ -73,3 +74,17 @@ relatorio_bp.route('/api/relatorio/vendas',                methods=['GET'])(toke
 relatorio_bp.route('/api/relatorio/mais-vendidos',         methods=['GET'])(token_required(RelatorioController.produtos_mais_vendidos))
 relatorio_bp.route('/api/relatorio/sem-movimento',         methods=['GET'])(token_required(RelatorioController.produtos_sem_movimento))
 relatorio_bp.route('/api/relatorio/estoque',               methods=['GET'])(token_required(RelatorioController.estoque_detalhado))
+
+# =============================================
+# Configurações
+# =============================================
+configuracao_bp = Blueprint('configuracoes', __name__)
+configuracao_bp.route('/api/configuracoes', methods=['GET'])(token_required(ConfiguracaoController.index))
+configuracao_bp.route('/api/configuracoes', methods=['PUT'])(token_required(ConfiguracaoController.update))
+
+# =============================================
+# Licença
+# =============================================
+licenca_bp = Blueprint('licenca', __name__)
+licenca_bp.route('/api/licenca', methods=['GET'])(token_required(LicencaController.index))
+licenca_bp.route('/api/licenca', methods=['PUT'])(token_required(LicencaController.update))

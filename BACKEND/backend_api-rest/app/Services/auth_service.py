@@ -2,6 +2,7 @@ import time
 import secrets
 from datetime import datetime
 from app.Repositories.auth_repository import AuthRepository
+from app.Services.licenca_service import LicencaService
 from app.Constants.geral import Geral
 from middlewares.auth_middleware import active_tokens
 
@@ -55,6 +56,11 @@ class AuthService:
         if not user:
             AuthService._registrar_falha(email_normalizado)
             return {'status': 401, 'error': Geral.CREDENCIAIS_INVALIDAS}
+
+        # Licença bloqueia todos os perfis, exceto o técnico (precisa conseguir
+        # entrar mesmo com a licença vencida/inativa para resolver o problema).
+        if user.get('tipo') != 'tecnico' and not LicencaService.licenca_permite_acesso():
+            return {'status': 403, 'error': 'Licença inativa ou vencida. Entre em contato com o suporte.'}
 
         AuthService._limpar_tentativas(email_normalizado)
 

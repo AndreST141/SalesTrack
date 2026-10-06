@@ -2,7 +2,7 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
-from routes.api import auth_bp, produto_bp, cliente_bp, venda_bp, categoria_bp, dashboard_bp, usuario_bp, relatorio_bp
+from routes.api import auth_bp, produto_bp, cliente_bp, venda_bp, categoria_bp, dashboard_bp, usuario_bp, relatorio_bp, configuracao_bp, licenca_bp
 
 load_dotenv()
 
@@ -45,6 +45,8 @@ app.register_blueprint(categoria_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(usuario_bp)
 app.register_blueprint(relatorio_bp)
+app.register_blueprint(configuracao_bp)
+app.register_blueprint(licenca_bp)
 
 if __name__ == '__main__':
     print("\n" + "="*60)
