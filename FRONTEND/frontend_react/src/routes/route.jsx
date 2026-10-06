@@ -6,6 +6,7 @@ import Produtos from "../pages/produtos/produtos";
 import Clientes from "../pages/clientes/clientes";
 import Relatorios from "../pages/relatorios/relatorios";
 import Configuracoes from "../pages/configuracoes/configuracoes";
+import Licenca from "../pages/licenca/licenca";
 import Login from "../pages/login/login";
 import PrivateRoute from "../components/PrivateRoute/PrivateRoute";
 
@@ -22,6 +23,7 @@ function Router() {
                 <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>}/>
                 <Route path="/relatorios" element={<PrivateRoute adminOnly><Relatorios /></PrivateRoute>}/>
                 <Route path="/configuracoes" element={<PrivateRoute adminOnly><Configuracoes /></PrivateRoute>}/>
+                <Route path="/licenca" element={<PrivateRoute tecnicoOnly><Licenca /></PrivateRoute>}/>
             </Routes>
         </BrowserRouter>
     );

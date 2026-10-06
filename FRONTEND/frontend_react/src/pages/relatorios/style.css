@@ -15,7 +15,7 @@
 /* ── Header ─────────────────────────────────────────────────────── */
 .body-relatorios .content-relatorios .title-page {
     display: flex;
-    height: 9vh;
+    height: 7vh;
     align-items: center;
     justify-content: space-between;
     padding: 0 28px;
@@ -25,10 +25,17 @@
 }
 
 .body-relatorios .content-relatorios .title-page h1 {
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 600;
     color: #1a1a18;
     letter-spacing: -0.4px;
+}
+
+.body-relatorios .content-relatorios .title-page span {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 400;
+    text-transform: capitalize;
 }
 
 .title-page-left {

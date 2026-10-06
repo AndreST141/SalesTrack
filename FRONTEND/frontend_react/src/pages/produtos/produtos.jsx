@@ -5,6 +5,7 @@ import Modal from '../../components/Modal/Modal';
 import FilterModal from '../../components/FilterModal/FilterModal';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { formatarDataAtual } from '../../utils/data';
 import './style.css';
 
 const formInicial = {
@@ -17,6 +18,7 @@ const formInicial = {
 };
 
 function Produtos() {
+    const dataAtual = formatarDataAtual();
     const [produtos, setProdutos] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -237,6 +239,7 @@ function Produtos() {
             <div className="content-produtos">
                 <div className="title-page">
                     <h1>Produtos</h1>
+                    <span>{dataAtual}</span>
                 </div>
                 <div className="produtos-body">
                     <Table

@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS Venda (
     idUsuario INT NOT NULL,
     valorTotal DECIMAL(10,2) NOT NULL,
     desconto DECIMAL(10,2) DEFAULT 0.00,
+    acrescimo DECIMAL(10,2) DEFAULT 0.00,
     valorFinal DECIMAL(10,2) NOT NULL,
     formaPagamento ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'outro') DEFAULT 'dinheiro',
     status ENUM('pendente', 'concluida', 'cancelada') DEFAULT 'concluida',
@@ -94,6 +95,25 @@ CREATE TABLE IF NOT EXISTS Venda (
     FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
     FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration: adiciona acrescimo caso o banco já exista sem a coluna
+DROP PROCEDURE IF EXISTS sp_add_acrescimo;
+DELIMITER //
+CREATE PROCEDURE sp_add_acrescimo()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME   = 'Venda'
+          AND COLUMN_NAME  = 'acrescimo'
+    ) THEN
+        ALTER TABLE Venda ADD COLUMN acrescimo DECIMAL(10,2) DEFAULT 0.00 AFTER desconto;
+    END IF;
+END //
+DELIMITER ;
+
+CALL sp_add_acrescimo();
+DROP PROCEDURE IF EXISTS sp_add_acrescimo;
 
 -- Tabela de Itens da Venda
 CREATE TABLE IF NOT EXISTS ItemVenda (
@@ -115,6 +135,56 @@ CREATE TABLE IF NOT EXISTS PagamentoVenda (
     valor DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (idVenda) REFERENCES Venda(idVenda) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de Configurações gerais do sistema (chave/valor), compartilhadas
+-- entre todos os usuários e dispositivos (substitui configs que antes só
+-- existiam no localStorage do navegador)
+CREATE TABLE IF NOT EXISTS Configuracao (
+    chave VARCHAR(50) PRIMARY KEY,
+    valor TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration: amplia 'valor' para TEXT (necessário para guardar JSON de dadosEmpresa)
+DROP PROCEDURE IF EXISTS sp_ampliar_valor_configuracao;
+DELIMITER //
+CREATE PROCEDURE sp_ampliar_valor_configuracao()
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME   = 'Configuracao'
+          AND COLUMN_NAME  = 'valor'
+          AND DATA_TYPE    = 'varchar'
+    ) THEN
+        ALTER TABLE Configuracao MODIFY COLUMN valor TEXT NOT NULL;
+    END IF;
+END //
+DELIMITER ;
+
+CALL sp_ampliar_valor_configuracao();
+DROP PROCEDURE IF EXISTS sp_ampliar_valor_configuracao;
+
+INSERT IGNORE INTO Configuracao (chave, valor) VALUES ('permiteEstoqueNegativo', 'false');
+
+-- Tabela de Licença do sistema (uma instalação = uma empresa/licença)
+CREATE TABLE IF NOT EXISTS Licenca (
+    idLicenca INT AUTO_INCREMENT PRIMARY KEY,
+    cnpj VARCHAR(18) DEFAULT '',
+    razaoSocial VARCHAR(150) DEFAULT '',
+    identificador VARCHAR(50) DEFAULT '',
+    status ENUM('ativa', 'suspensa', 'expirada', 'cancelada') DEFAULT 'ativa',
+    dataInicio DATE NOT NULL,
+    dataVencimento DATE DEFAULT NULL,
+    observacoes TEXT,
+    dataCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed: garante que toda instalação já nasce com uma licença ativa e sem
+-- vencimento, para não travar o primeiro acesso. Ajuste depois pela tela de
+-- Configurações ou diretamente no banco.
+INSERT INTO Licenca (cnpj, razaoSocial, identificador, status, dataInicio)
+SELECT '', '', '', 'ativa', CURDATE()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM Licenca LIMIT 1);
 
 -- =============================================
 -- Dados Iniciais (SEGUROS para re-execução)

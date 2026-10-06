@@ -6,9 +6,11 @@ import FilterModal from '../../components/FilterModal/FilterModal';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { formatarDataAtual } from '../../utils/data';
 import './style.css';
 
 function Historico() {
+    const dataAtual = formatarDataAtual();
     const [vendas, setVendas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [vendaSelecionada, setVendaSelecionada] = useState(null);
@@ -203,6 +205,7 @@ function Historico() {
             <div className="content-historico">
                 <div className="title-page">
                     <h1>Histórico de Vendas</h1>
+                    <span>{dataAtual}</span>
                 </div>
                 <div className="historico-body">
                     <Table
@@ -363,6 +366,14 @@ function Historico() {
                                         - {fmt(vendaSelecionada.desconto)}
                                     </span>
                                 </div>
+                                {vendaSelecionada.acrescimo > 0 && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Acréscimo</span>
+                                        <span className="detail-value" style={{ color: '#16a34a' }}>
+                                            + {fmt(vendaSelecionada.acrescimo)}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="detail-row total-final">
                                     <span className="detail-label"><strong>TOTAL</strong></span>
                                     <span className="detail-value">{fmt(vendaSelecionada.valorFinal)}</span>

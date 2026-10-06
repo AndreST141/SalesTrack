@@ -6,6 +6,7 @@ import FilterModal from '../../components/FilterModal/FilterModal';
 import ModalConvenio from './ModalConvenio';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { formatarDataAtual } from '../../utils/data';
 import './style.css';
 
 // ── Máscaras ──────────────────────────────────────────────
@@ -59,6 +60,7 @@ const formInicial = {
 };
 
 function Clientes() {
+    const dataAtual = formatarDataAtual();
     const [clientes, setClientes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalForm, setModalForm] = useState(false);
@@ -355,6 +357,7 @@ function Clientes() {
             <div className="content-clientes">
                 <div className="title-page">
                     <h1>Clientes</h1>
+                    <span>{dataAtual}</span>
                 </div>
                 <div className="clientes-body">
                     <Table

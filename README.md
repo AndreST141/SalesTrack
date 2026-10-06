@@ -59,7 +59,13 @@ MYSQL_PORT=3307
 BACKEND_PORT=5000
 FRONTEND_PORT=5173
 VITE_API_URL=http://localhost:5000/api
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
+TECNICO_SECRET=gere_com_pyotp_random_base32
 ```
+
+> `TECNICO_SECRET` precisa ser uma string base32 válida. Gere uma nova com:
+> `docker-compose exec backend python -c "import pyotp; print(pyotp.random_base32())"`
+> Guarde esse valor em sigilo — é a credencial de acesso técnico do sistema.
 
 ---
 
@@ -79,9 +85,13 @@ docker-compose ps
 
 ---
 
-## 3. Executar a migration (apenas na primeira vez)
+## 3. Executar a migration (apenas se o banco já existia antes desta versão)
 
-Após os containers subirem, rode a migration para criar os perfis de usuário e as colunas de cancelamento:
+Em uma instalação **nova** (volume do MySQL vazio), o `docker-compose.yml` já monta e executa
+`database_setup.sql` e `migration_roles.sql` automaticamente — não é preciso fazer nada aqui.
+
+Se você já tinha um banco criado com uma versão anterior do projeto (volume do MySQL já existente),
+rode a migration manualmente uma única vez:
 
 ```powershell
 docker cp BACKEND/database/migration_roles.sql salestrack_database:/tmp/migration.sql
@@ -90,7 +100,7 @@ docker exec salestrack_database sh -c "mysql -uroot -pSUA_SENHA salestrack < /tm
 
 > Substitua `SUA_SENHA` pelo valor de `MYSQL_ROOT_PASSWORD` definido no seu `.env`.
 
-Esse passo só precisa ser feito **uma única vez**. Nas próximas vezes que subir o projeto basta o passo 2.
+O script é seguro para rodar mais de uma vez (não duplica dados nem colunas).
 
 ---
 
@@ -112,9 +122,18 @@ Após todos os passos, a aplicação estará disponível em:
 |--------|-------|-------|
 | Administrador | admin@salestrack.com | admin123 |
 | Vendedor | vendedor@salestrack.com | vendedor123 |
-| Técnico | TECNICO | data atual no formato `YYYYMMDD` |
+| Técnico | TECNICO | código TOTP (app autenticador) — veja abaixo |
 
-> **Usuário Técnico:** a senha muda todo dia automaticamente. Para logar no dia 07/06/2026, a senha é `20260607`.
+> **Usuário Técnico:** a senha é um código TOTP padrão (RFC 6238, o mesmo esquema do Google
+> Authenticator/Authy), calculado a partir do segredo definido em `TECNICO_SECRET` no `.env`.
+> Para cadastrar o segredo no seu app autenticador (uma única vez), rode:
+>
+> ```powershell
+> docker-compose exec backend python scripts/gerar_codigo_tecnico.py
+> ```
+>
+> O script mostra a chave para colar no app e o código válido no momento. Depois do cadastro,
+> o app mostra sozinho o código atual — não precisa mais rodar o script no dia a dia.
 
 ---
 
@@ -186,6 +205,8 @@ DB_USER=root
 DB_PASSWORD=sua_senha
 DB_NAME=salestrack
 DB_CHARSET=utf8mb4
+ALLOWED_ORIGINS=http://localhost:5173
+TECNICO_SECRET=gere_com_pyotp_random_base32
 ```
 
 Depois execute:

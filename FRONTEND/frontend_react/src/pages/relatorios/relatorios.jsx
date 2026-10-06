@@ -4,6 +4,7 @@ import Table from '../../components/Table/Table';
 import FilterModal from '../../components/FilterModal/FilterModal';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { formatarDataAtual } from '../../utils/data';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
@@ -244,6 +245,8 @@ function PieTooltipCustom({ active, payload }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 function Relatorios() {
+    const dataAtual = formatarDataAtual();
+
     // ─── State ───
     const [activeReport, setActiveReport] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -969,6 +972,7 @@ function Relatorios() {
                                     </svg>
                                 </button>
                                 <h1>{reportDef?.title || 'Relatório'}</h1>
+                                <span>{dataAtual}</span>
                             </div>
                             <div className="title-page-actions">
                                 <button className="btn-export btn-export-excel" onClick={exportExcel} disabled={loading || !reportData?.data?.length}>
@@ -990,7 +994,10 @@ function Relatorios() {
                             </div>
                         </>
                     ) : (
-                        <h1>Relatórios</h1>
+                        <>
+                            <h1>Relatórios</h1>
+                            <span>{dataAtual}</span>
+                        </>
                     )}
                 </div>
 

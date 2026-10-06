@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/SideBar/sidebar";
 import api from "../../services/api";
 import { useNotification } from "../../contexts/NotificationContext";
+import { formatarDataAtual } from "../../utils/data";
 import {
   AreaChart,
   Area,
@@ -86,9 +87,7 @@ function Dashboard() {
   
   const { showNotification } = useNotification();
 
-  const dataAtual = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
+  const dataAtual = formatarDataAtual();
 
   const fmt = (val) =>
     Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

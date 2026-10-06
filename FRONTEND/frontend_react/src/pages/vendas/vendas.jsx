@@ -94,6 +94,7 @@ function Vendas() {
     const total = subtotal - descontoValor + acrescimoValor;
     const totalPago = pagamentos.reduce((sum, p) => sum + p.valor, 0);
     const restante = Math.max(0, total - totalPago);
+    const algumModalAberto = modalDesconto || modalAcrescimo || modalCpf || modalPagamento || modalCancelarVenda || modalCancelarItem || modalTroco;
 
     useEffect(() => {
         async function carregarDados() {
@@ -264,6 +265,11 @@ function Vendas() {
         setClienteConvenioSelecionado(null);
         setBuscaConvenio('');
         setTimeout(() => inputPagamentoValorRef.current?.focus(), 50);
+
+        const faltaAinda = restante - valor;
+        if (faltaAinda > 0.01) {
+            showNotification(`Pagamento de ${fmt(valor)} adicionado. Restante: ${fmt(faltaAinda)}`, 'info');
+        }
     }
 
     function removerPagamento(index) {
@@ -365,7 +371,8 @@ function Vendas() {
             inputBarcodeRef.current?.focus();
         } catch (err) {
             console.error('Erro ao finalizar venda:', err);
-            showNotification('Erro ao finalizar venda', 'error');
+            const msg = err.response?.data?.error || 'Erro ao finalizar venda';
+            showNotification(msg, 'error');
         } finally {
             setFinalizando(false);
         }
@@ -376,6 +383,9 @@ function Vendas() {
         setPagamentoIndex(index);
         setClienteConvenioSelecionado(null);
         setBuscaConvenio('');
+        // O campo fica vazio de propósito — o valor pendente aparece só como
+        // placeholder (visual). Assim, digitar um valor parcial não exige
+        // apagar nada antes: o campo já está limpo, pronto para receber.
         if (value !== 'convenio') {
             setTimeout(() => inputPagamentoValorRef.current?.focus(), 50);
         } else {
@@ -383,34 +393,68 @@ function Vendas() {
         }
     }, []);
 
-    // Chamado pelo Enter no modal de pagamento (via onConfirm do Modal)
-    // Sem valor digitado → adiciona o restante e finaliza a venda
-    // Com valor digitado → adiciona pagamento parcial apenas
+    // Chamado pelo Enter no modal de pagamento (via onConfirm do Modal).
+    // Campo vazio = usa o valor pendente mostrado no placeholder (paga tudo).
+    // Campo com valor digitado = usa exatamente o que foi digitado.
+    // Se o valor a usar cobre o saldo pendente, finaliza a venda direto;
+    // caso contrário, é pagamento parcial: adiciona e mantém o modal aberto
+    // para a próxima forma de pagamento.
     const handleConfirmPagamento = useCallback(() => {
-        const valorDigitado = getNumericValue(pagamentoValor);
-
-        if (valorDigitado > 0) {
-            adicionarPagamento();
-            return;
-        }
-
-        if (restante <= 0) {
-            finalizarVenda([]);
-            return;
-        }
-
         if (isConvenio && !clienteConvenioSelecionado) {
             showNotification('Selecione um cliente conveniado', 'warning');
             return;
         }
 
-        const novoPagamento = { forma: pagamentoForma, valor: restante };
+        const valorDigitado = getNumericValue(pagamentoValor);
+        const valorAUsar = valorDigitado > 0 ? valorDigitado : restante;
+
+        if (valorAUsar <= 0) {
+            showNotification('Informe um valor válido', 'warning');
+            return;
+        }
+
+        const novoPagamento = { forma: pagamentoForma, valor: valorAUsar };
         if (isConvenio && clienteConvenioSelecionado) {
             novoPagamento.clienteConvenio = clienteConvenioSelecionado;
         }
 
-        finalizarVenda([novoPagamento]);
+        // Cobre o saldo pendente (com tolerância de 1 centavo) → finaliza direto.
+        // Dinheiro pode exceder o restante (vira troco) e também cai aqui, pois
+        // "exceder" também satisfaz ">= restante".
+        if (valorAUsar >= restante - 0.01) {
+            finalizarVenda([novoPagamento]);
+            return;
+        }
+
+        // Valor menor que o restante: pagamento parcial de verdade.
+        adicionarPagamento();
     }, [pagamentoValor, restante, isConvenio, clienteConvenioSelecionado, pagamentoForma, adicionarPagamento, finalizarVenda, showNotification]);
+
+    // Fecha o modal de pagamento e limpa o estado temporário digitado (valor,
+    // forma selecionada, busca de convênio). NÃO limpa `pagamentos` — pagamentos
+    // parciais já confirmados continuam valendo se o usuário reabrir o modal.
+    const fecharModalPagamento = useCallback(() => {
+        setModalPagamento(false);
+        setPagamentoValor('');
+        setPagamentoForma(formasPagamento[0]?.value || 'dinheiro');
+        setPagamentoIndex(0);
+        setClienteConvenioSelecionado(null);
+        setBuscaConvenio('');
+        inputBarcodeRef.current?.focus();
+    }, [formasPagamento]);
+
+    // Sempre que o modal de pagamento abre, garante que o teclado vai para o
+    // campo certo (não para o código de barras atrás dele). O campo começa
+    // vazio de propósito — o valor pendente aparece só como placeholder.
+    useEffect(() => {
+        if (!modalPagamento) return;
+        const timer = setTimeout(() => {
+            if (isConvenio) inputConvenioRef.current?.focus();
+            else inputPagamentoValorRef.current?.focus();
+        }, 50);
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [modalPagamento]);
 
     const handlePaymentKeyDown = useCallback((e) => {
         if (!modalPagamento) return;
@@ -451,31 +495,27 @@ function Vendas() {
     }, [modalPagamento, selectPaymentMethod, formasPagamento, finalizarVenda]);
 
     const handleKeyDown = useCallback((e) => {
-        const algumodalAberto = modalDesconto || modalAcrescimo || modalCpf || modalPagamento || modalCancelarVenda || modalCancelarItem || modalTroco;
-
         if (modalPagamento) {
             if (e.key === 'Escape') {
                 e.preventDefault();
-                setModalPagamento(false);
-                inputBarcodeRef.current?.focus();
+                fecharModalPagamento();
                 return;
             }
-            
+
             handlePaymentKeyDown(e);
             return;
         }
 
-        if (algumodalAberto && e.key !== 'Escape') return;
+        if (algumModalAberto && e.key !== 'Escape') return;
 
         switch (e.key) {
             case 'Escape':
                 if (modalTroco) {
                     setModalTroco(false);
-                } else if (algumodalAberto) {
+                } else if (algumModalAberto) {
                     setModalDesconto(false);
                     setModalAcrescimo(false);
                     setModalCpf(false);
-                    setModalPagamento(false);
                     setModalCancelarVenda(false);
                     setModalCancelarItem(false);
                     inputBarcodeRef.current?.focus();
@@ -516,7 +556,6 @@ function Vendas() {
             case 'F10':
                 e.preventDefault();
                 setModalPagamento(true);
-                setTimeout(() => inputPagamentoValorRef.current?.focus(), 100);
                 break;
             case 'F12':
                 e.preventDefault();
@@ -525,7 +564,7 @@ function Vendas() {
             default:
                 break;
         }
-    }, [modalDesconto, modalAcrescimo, modalCpf, modalPagamento, modalCancelarVenda, modalCancelarItem, itensVenda, handlePaymentKeyDown, finalizarVenda]);
+    }, [modalPagamento, algumModalAberto, modalTroco, itensVenda, handlePaymentKeyDown, finalizarVenda, fecharModalPagamento]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -572,6 +611,7 @@ function Vendas() {
                                     onChange={(e) => setTermoBusca(e.target.value)}
                                     onKeyDown={handleBuscaKeyDown}
                                     className="barcode-input"
+                                    disabled={algumModalAberto}
                                 />
                                 <div className="qty-input-wrapper">
                                     <label>Qtd:</label>
@@ -581,6 +621,7 @@ function Vendas() {
                                         value={quantidade}
                                         onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
                                         className="qty-input"
+                                        disabled={algumModalAberto}
                                     />
                                 </div>
                             </div>
@@ -856,7 +897,7 @@ function Vendas() {
                 {/* Modal Pagamento layout compacto, sem scroll do body */}
                 <Modal
                     isOpen={modalPagamento}
-                    onClose={() => setModalPagamento(false)}
+                    onClose={fecharModalPagamento}
                     title="Forma de Pagamento"
                     maxWidth="580px"
                     onConfirm={handleConfirmPagamento}
@@ -864,7 +905,7 @@ function Vendas() {
                         <div className="pagamento-modal-footer-row">
                             <button
                                 className="btn-modal-cancel"
-                                onClick={() => setModalPagamento(false)}
+                                onClick={fecharModalPagamento}
                                 title="Fechar e voltar à tela de vendas (Esc)"
                             >
                                 Voltar às Vendas (ESQ)
@@ -872,7 +913,7 @@ function Vendas() {
                             <button
                                 className="btn-modal-confirm btn-finalizar-modal"
                                 onClick={() => finalizarVenda()}
-                                disabled={finalizando || restante > 0.01}
+                                disabled={finalizando}
                                 title="Finalizar Venda (F12)"
                             >
                                 {finalizando ? 'Finalizando...' : 'Finalizar Venda (F12)'}

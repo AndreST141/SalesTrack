@@ -5,6 +5,7 @@ import { useConfig } from '../../contexts/ConfigContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import api from '../../services/api';
 import StorageService from '../../services/storageService';
+import { formatarDataAtual } from '../../utils/data';
 import './style.css';
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ const TIPO_BADGE  = { admin: 'badge-info', supervisor: 'badge-warning', vendedor
 // ─── Component ─────────────────────────────────────────────────────
 
 function Configuracoes() {
+    const dataAtual = formatarDataAtual();
     const {
         permiteEstoqueNegativo, setPermiteEstoqueNegativo,
         dadosEmpresa, setDadosEmpresa,
@@ -58,6 +60,7 @@ function Configuracoes() {
     const [empresa, setEmpresa] = useState(dadosEmpresa);
     const [erros, setErros] = useState({});
     const [cepLoading, setCepLoading] = useState(false);
+    const [salvandoEstoqueNegativo, setSalvandoEstoqueNegativo] = useState(false);
     const cepAbortRef = useRef(null);
     const cepTimerRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -150,7 +153,9 @@ function Configuracoes() {
     }, [showNotification]);
 
     // ── Validação + Salvar ──────────────────────────────────────
-    const salvarEmpresa = () => {
+    const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
+
+    const salvarEmpresa = async () => {
         const e = {};
         const c = empresa.cadastro;
         if (!c.razaoSocial || c.razaoSocial.trim().length < 3) e.razaoSocial = 'Mínimo 3 caracteres';
@@ -164,9 +169,31 @@ function Configuracoes() {
             return;
         }
         setErros({});
-        setDadosEmpresa(empresa);
-        showNotification('Dados da empresa salvos com sucesso!', 'success');
+        setSalvandoEmpresa(true);
+        try {
+            await setDadosEmpresa(empresa);
+            showNotification('Dados da empresa salvos com sucesso!', 'success');
+        } catch (err) {
+            console.error('Erro ao salvar dados da empresa:', err);
+            showNotification('Erro ao salvar dados da empresa no servidor.', 'error');
+        } finally {
+            setSalvandoEmpresa(false);
+        }
     };
+
+    // ── Comportamento de Vendas ──────────────────────────────────
+    async function alternarEstoqueNegativo() {
+        setSalvandoEstoqueNegativo(true);
+        try {
+            await setPermiteEstoqueNegativo(!permiteEstoqueNegativo);
+            showNotification('Configuração salva com sucesso!', 'success');
+        } catch (err) {
+            console.error('Erro ao salvar configuração:', err);
+            showNotification('Erro ao salvar configuração no servidor.', 'error');
+        } finally {
+            setSalvandoEstoqueNegativo(false);
+        }
+    }
 
     // ── Impressora ─────────────────────────────────────────────
     const handleFormato = (value) => {
@@ -334,6 +361,7 @@ function Configuracoes() {
             <div className="content-configuracoes">
                 <div className="title-page">
                     <h1>Configurações</h1>
+                    <span>{dataAtual}</span>
                 </div>
                 <div className="configuracoes-body">
 
@@ -475,7 +503,9 @@ function Configuracoes() {
                             </div>
 
                             <div className="config-card-actions">
-                                <button className="btn-primary" onClick={salvarEmpresa}>Salvar Dados</button>
+                                <button className="btn-primary" onClick={salvarEmpresa} disabled={salvandoEmpresa}>
+                                    {salvandoEmpresa ? 'Salvando...' : 'Salvar Dados'}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -536,7 +566,8 @@ function Configuracoes() {
                                 <button
                                     id="toggle-estoque-negativo"
                                     className={`config-toggle-btn ${permiteEstoqueNegativo ? 'active' : ''}`}
-                                    onClick={() => setPermiteEstoqueNegativo(!permiteEstoqueNegativo)}
+                                    onClick={alternarEstoqueNegativo}
+                                    disabled={salvandoEstoqueNegativo}
                                     aria-pressed={permiteEstoqueNegativo}
                                     title={permiteEstoqueNegativo ? 'Desativar' : 'Ativar'}
                                 >

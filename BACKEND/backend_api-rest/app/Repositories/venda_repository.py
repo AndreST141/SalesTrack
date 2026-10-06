@@ -1,4 +1,12 @@
 from config.database import get_db_connection
+from app.Repositories.configuracao_repository import ConfiguracaoRepository
+
+
+class EstoqueInsuficienteError(Exception):
+    """Levantado quando uma venda tentaria deixar o estoque negativo
+    e a configuração 'permiteEstoqueNegativo' está desativada."""
+    pass
+
 
 class VendaRepository:
 
@@ -89,19 +97,23 @@ class VendaRepository:
 
     @staticmethod
     def create(dados, usuario_id):
+        permite_negativo = ConfiguracaoRepository.get_bool('permiteEstoqueNegativo', False)
+
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
             data_venda = dados.get('dataVenda')
+            acrescimo = dados.get('acrescimo', 0) or 0
             if data_venda:
                 cursor.execute("""
-                    INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, valorFinal, formaPagamento, observacoes, dataVenda)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, acrescimo, valorFinal, formaPagamento, observacoes, dataVenda)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     dados.get('idCliente'),
                     usuario_id,
                     dados['valorTotal'],
                     dados.get('desconto', 0),
+                    acrescimo,
                     dados['valorFinal'],
                     dados['formaPagamento'],
                     dados.get('observacoes', ''),
@@ -109,13 +121,14 @@ class VendaRepository:
                 ))
             else:
                 cursor.execute("""
-                    INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, valorFinal, formaPagamento, observacoes)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, acrescimo, valorFinal, formaPagamento, observacoes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     dados.get('idCliente'),
                     usuario_id,
                     dados['valorTotal'],
                     dados.get('desconto', 0),
+                    acrescimo,
                     dados['valorFinal'],
                     dados['formaPagamento'],
                     dados.get('observacoes', '')
@@ -124,14 +137,35 @@ class VendaRepository:
 
             # Inserir itens da venda
             for item in dados['itens']:
+                # Trava a linha do produto (FOR UPDATE) para checar e decrementar o
+                # estoque de forma atomica, evitando corrida entre vendas simultaneas
+                # do mesmo produto.
+                cursor.execute(
+                    "SELECT nome, estoque FROM Produto WHERE idProduto = %s FOR UPDATE",
+                    (item['idProduto'],)
+                )
+                produto = cursor.fetchone()
+                if produto is None:
+                    raise EstoqueInsuficienteError(f"Produto id {item['idProduto']} não encontrado.")
+
+                nome_produto, estoque_atual = produto
+                novo_estoque = estoque_atual - item['quantidade']
+
+                if not permite_negativo and novo_estoque < 0:
+                    raise EstoqueInsuficienteError(
+                        f'Estoque insuficiente para "{nome_produto}" '
+                        f"(disponível: {estoque_atual}, solicitado: {item['quantidade']})."
+                    )
+
                 cursor.execute("""
                     INSERT INTO ItemVenda (idVenda, idProduto, quantidade, precoUnitario, subtotal)
                     VALUES (%s, %s, %s, %s, %s)
                 """, (venda_id, item['idProduto'], item['quantidade'], item['precoUnitario'], item['subtotal']))
 
-                cursor.execute("""
-                    UPDATE Produto SET estoque = estoque - %s WHERE idProduto = %s
-                """, (item['quantidade'], item['idProduto']))
+                cursor.execute(
+                    "UPDATE Produto SET estoque = %s WHERE idProduto = %s",
+                    (novo_estoque, item['idProduto'])
+                )
 
             # Inserir pagamentos na tabela PagamentoVenda
             pagamentos = dados.get('pagamentos', [])
