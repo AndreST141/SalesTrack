@@ -73,18 +73,18 @@ function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
-    const [itemActive, setItemActive] = useState(location.pathname);
-    const [expanded, setExpanded] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
+
+    const expanded = isHovered || isFocused;
 
     const handleItemClick = (path) => {
-        setExpanded(false);
-        setItemActive(path);
         navigate(path);
     };
 
     const handleBlurContainer = (e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) {
-            setExpanded(false);
+            setIsFocused(false);
         }
     };
 
@@ -108,13 +108,15 @@ function Sidebar() {
     const isVendedor = user?.tipo === 'vendedor';
     const isTecnico = user?.tipo === 'tecnico';
 
+    const itemActive = location.pathname;
+
     return (
         <div className={`body-sidebar ${expanded ? 'is-expanded' : ''}`}>
             <div
                 className={`box-vertical ${expanded ? 'is-expanded' : ''}`}
-                onMouseEnter={() => setExpanded(true)}
-                onMouseLeave={() => setExpanded(false)}
-                onFocus={() => setExpanded(true)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                onFocus={() => setIsFocused(true)}
                 onBlur={handleBlurContainer}
             >
                 <div className="header-dashboard">
