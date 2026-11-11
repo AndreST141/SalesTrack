@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import './style.css';
+
+// Estado global para persistir o hover entre montagens de página/rotas do React Router
+let globalSidebarHovered = false;
+let globalSidebarFocused = false;
 
 const ICONS = {
     dashboard: (
@@ -73,22 +77,72 @@ function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
-    const [isHovered, setIsHovered] = useState(false);
-    const [isFocused, setIsFocused] = useState(false);
+    const boxRef = useRef(null);
+
+    const [isHovered, setIsHovered] = useState(() => globalSidebarHovered);
+    const [isFocused, setIsFocused] = useState(() => globalSidebarFocused);
 
     const expanded = isHovered || isFocused;
 
-    const handleItemClick = (path) => {
-        navigate(path);
+    useEffect(() => {
+        // Verifica se o mouse ainda está sobre a barra lateral após mudança de rota
+        const handleWindowMouseMove = (e) => {
+            if (boxRef.current) {
+                const rect = boxRef.current.getBoundingClientRect();
+                const isInside = (
+                    e.clientX >= rect.left &&
+                    e.clientX <= rect.right &&
+                    e.clientY >= rect.top &&
+                    e.clientY <= rect.bottom
+                );
+                if (!isInside && globalSidebarHovered) {
+                    globalSidebarHovered = false;
+                    setIsHovered(false);
+                } else if (isInside && !globalSidebarHovered) {
+                    globalSidebarHovered = true;
+                    setIsHovered(true);
+                }
+            }
+        };
+
+        window.addEventListener('mousemove', handleWindowMouseMove, { passive: true });
+        return () => {
+            window.removeEventListener('mousemove', handleWindowMouseMove);
+        };
+    }, []);
+
+    const handleMouseEnter = () => {
+        globalSidebarHovered = true;
+        setIsHovered(true);
+    };
+
+    const handleMouseLeave = () => {
+        globalSidebarHovered = false;
+        setIsHovered(false);
+    };
+
+    const handleFocus = () => {
+        globalSidebarFocused = true;
+        setIsFocused(true);
     };
 
     const handleBlurContainer = (e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) {
+            globalSidebarFocused = false;
             setIsFocused(false);
         }
     };
 
+    const handleItemClick = (path) => {
+        // Mantém aberto na transição da página
+        globalSidebarHovered = true;
+        setIsHovered(true);
+        navigate(path);
+    };
+
     async function handleLogout() {
+        globalSidebarHovered = false;
+        globalSidebarFocused = false;
         await logout();
         navigate('/login');
     }
@@ -113,10 +167,11 @@ function Sidebar() {
     return (
         <div className={`body-sidebar ${expanded ? 'is-expanded' : ''}`}>
             <div
+                ref={boxRef}
                 className={`box-vertical ${expanded ? 'is-expanded' : ''}`}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                onFocus={() => setIsFocused(true)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                onFocus={handleFocus}
                 onBlur={handleBlurContainer}
             >
                 <div className="header-dashboard">
