@@ -4,7 +4,9 @@ import Table from '../../components/Table/Table';
 import FilterModal from '../../components/FilterModal/FilterModal';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useConfig } from '../../contexts/ConfigContext';
 import { formatarDataAtual } from '../../utils/data';
+import { labelFormaPagamento } from '../../utils/pagamento';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
@@ -246,6 +248,7 @@ function PieTooltipCustom({ active, payload }) {
 
 function Relatorios() {
     const dataAtual = formatarDataAtual();
+    const { formasPagamento } = useConfig();
 
     // ─── State ───
     const [activeReport, setActiveReport] = useState(null);
@@ -408,8 +411,8 @@ function Relatorios() {
             dataFormatada: fmtDateTime(v.dataVenda),
             valorFinalFmt: fmt(v.valorFinal),
             pagamentoLabel: v.pagamentos?.length
-                ? v.pagamentos.map(p => PAYMENT_LABELS[p.formaPagamento] || p.formaPagamento).join(', ')
-                : (PAYMENT_LABELS[v.formaPagamento] || v.formaPagamento),
+                ? v.pagamentos.map(p => labelFormaPagamento(p.formaPagamento, formasPagamento, PAYMENT_LABELS)).join(', ')
+                : labelFormaPagamento(v.formaPagamento, formasPagamento, PAYMENT_LABELS),
         }));
 
         const totalReceita = vendasBase.reduce((s, v) => s + (v.valorFinal || 0), 0);
@@ -465,7 +468,7 @@ function Relatorios() {
                 : [{ formaPagamento: v.formaPagamento || 'outro', valor: v.valorFinal || 0 }];
             pagamentosVenda.forEach(p => {
                 const forma = p.formaPagamento;
-                if (!byPayment[forma]) byPayment[forma] = { formaPagamento: forma, label: PAYMENT_LABELS[forma] || forma, quantidade: 0, total: 0 };
+                if (!byPayment[forma]) byPayment[forma] = { formaPagamento: forma, label: labelFormaPagamento(forma, formasPagamento, PAYMENT_LABELS), quantidade: 0, total: 0 };
                 byPayment[forma].quantidade += 1;
                 byPayment[forma].total += Number(p.valor) || 0;
             });
@@ -638,7 +641,7 @@ function Relatorios() {
         const ativos = data.filter(p => p.ativo !== false && p.ativo !== 0);
         const totalValorEstoque = ativos.reduce((s, p) => s + (p.valorEstoque || 0), 0);
         const semEstoque   = ativos.filter(p => (p.estoque || 0) <= 0).length;
-        const estoqueBaixo = ativos.filter(p => (p.estoque || 0) > 0 && (p.estoque || 0) < 10).length;
+        const estoqueBaixo = ativos.filter(p => (p.estoque || 0) > 0 && (p.estoque || 0) < (p.estoqueMinimo ?? 10)).length;
         const nuncaVendido = ativos.filter(p => !p.ultimaVenda).length;
 
         return {
@@ -646,11 +649,14 @@ function Relatorios() {
                 { key: 'idProduto', label: 'ID' },
                 { key: 'nome', label: 'Produto' },
                 { key: 'categoria', label: 'Categoria', render: v => v || '-' },
-                { key: 'estoque', label: 'Estoque', render: v => (
-                    <span className={`badge ${(v||0)<=0 ? 'badge-danger' : (v||0)<10 ? 'badge-warning' : 'badge-success'}`}>
-                        {v || 0}
-                    </span>
-                )},
+                { key: 'estoque', label: 'Estoque', render: (v, item) => {
+                    const minimo = item.estoqueMinimo ?? 10;
+                    return (
+                        <span className={`badge ${(v||0)<=0 ? 'badge-danger' : (v||0)<minimo ? 'badge-warning' : 'badge-success'}`}>
+                            {v || 0} {item.unidadeMedida || 'UN'}
+                        </span>
+                    );
+                }},
                 { key: 'preco', label: 'Preço Unit.', render: v => fmt(v) },
                 { key: 'valorEstoque', label: 'Valor Estoque', render: v => <strong>{fmt(v||0)}</strong> },
                 { key: 'totalVendido', label: 'Total Vendido' },

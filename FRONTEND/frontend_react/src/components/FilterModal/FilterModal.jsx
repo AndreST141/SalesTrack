@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Modal from '../Modal/Modal';
+import { MASCARAS } from '../../utils/mascaras';
 import './style.css';
 
 function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onApply }) {
@@ -35,6 +36,7 @@ function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onAppl
             title="Filtros Avançados"
             maxWidth="520px"
             onConfirm={handleApply}
+            closeOnOverlayClick={false}
             className='modal-footer-buttons'
             footer={
                 <>
@@ -73,7 +75,11 @@ function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onAppl
                             <input
                                 type="text"
                                 value={localFilters[filter.key] || ''}
-                                onChange={(e) => handleChange(filter.key, e.target.value)}
+                                onChange={(e) => {
+                                    const raw = e.target.value;
+                                    const aplicarMascara = filter.mask && MASCARAS[filter.mask];
+                                    handleChange(filter.key, aplicarMascara ? MASCARAS[filter.mask](raw) : raw);
+                                }}
                                 placeholder={filter.placeholder || `Filtrar por ${filter.label.toLowerCase()}...`}
                             />
                         )}

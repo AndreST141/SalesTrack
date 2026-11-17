@@ -44,3 +44,201 @@
     overflow-y: auto;
     flex: 1;
 }
+
+/* ── Modal de cadastro: densidade mais clean (só na página de Produtos) ── */
+.body-produtos .body-modal .modal-container .modal-body .form-group {
+    margin-bottom: 13px;
+}
+
+.body-produtos .body-modal .modal-container .modal-body .form-group label {
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.body-produtos .body-modal .modal-container .modal-body .form-group input,
+.body-produtos .body-modal .modal-container .modal-body .form-group select,
+.body-produtos .body-modal .modal-container .modal-body .form-group textarea {
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
+.body-produtos .body-modal .modal-container .modal-body .form-row,
+.body-produtos .body-modal .modal-container .modal-body .form-row-3 {
+    gap: 12px;
+}
+
+.body-produtos .body-modal .modal-container .modal-header {
+    padding: 10px 20px;
+}
+
+.body-produtos .body-modal .modal-container .modal-header h2 {
+    font-size: 16px;
+}
+
+.body-produtos .body-modal .modal-container .modal-body {
+    padding: 16px 20px 20px 20px;
+}
+
+.body-produtos .body-modal .modal-container .modal-footer {
+    padding: 12px 20px;
+}
+
+/* ── Form: código de barras com gerador ──────────────────────────────── */
+.body-produtos .campo-codigo-barras {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.body-produtos .campo-codigo-barras .input-codigo-barras {
+    width: 190px;
+    flex: 0 0 190px;
+}
+
+.body-produtos .btn-gerar-codigo {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #1570EF;
+    background: #fff;
+    color: #1570EF;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.body-produtos .btn-gerar-codigo svg {
+    width: 16px;
+    height: 16px;
+}
+
+.body-produtos .btn-gerar-codigo:hover {
+    background: #eff6ff;
+}
+
+.body-produtos .btn-gerar-codigo:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Form: linha Descrição / Descrição Resumida / Unidade ───────────── */
+.body-produtos .linha-descricao {
+    display: flex;
+    gap: 12px;
+}
+
+.body-produtos .linha-descricao .campo-descricao {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.body-produtos .linha-descricao .campo-unidade {
+    flex: 0 0 90px;
+}
+
+/* ── Form: linha Estoque / Estoque Mínimo ────────────────────────────── */
+.body-produtos .linha-estoque {
+    display: flex;
+    gap: 12px;
+}
+
+.body-produtos .linha-estoque .campo-estoque {
+    flex: 0 0 120px;
+}
+
+/* ── Form: linha Categoria + criação ──────────────────────────────────── */
+.body-produtos .linha-categoria {
+    display: flex;
+    gap: 8px;
+}
+
+.body-produtos .linha-categoria select {
+    flex: 1;
+}
+
+.body-produtos .btn-nova-categoria {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border: 1px solid #1570EF;
+    background: #eff6ff;
+    color: #1570EF;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.body-produtos .btn-nova-categoria svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.body-produtos .btn-nova-categoria:hover {
+    background: #dbeafe;
+}
+
+.body-produtos .btn-excluir-categoria {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border: 1px solid #fca5a5;
+    background: #fff;
+    color: #dc2626;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.body-produtos .btn-excluir-categoria:hover:not(:disabled) {
+    background: #fef2f2;
+}
+
+.body-produtos .btn-excluir-categoria:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Form: criação de categoria inline ───────────────────────────────── */
+.body-produtos .categoria-nova-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.body-produtos .categoria-nova-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.body-produtos .categoria-nova-row button {
+    padding: 8px 14px;
+    border: none;
+    background: #1570EF;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.body-produtos .categoria-nova-row button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

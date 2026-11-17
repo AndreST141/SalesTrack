@@ -1,55 +1,35 @@
 import { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Modal from '../../components/Modal/Modal';
+import api from '../../services/api';
+import { useConfig } from '../../contexts/ConfigContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { labelFormaPagamento } from '../../utils/pagamento';
 import './style.css';
 
-// ─── Dados mock de compras do convênio ────────────────────────────────────────
-// Quando o back estiver pronto, trocar por chamadas api.get('/convenio/:idCliente')
-function gerarComprasMock(idCliente) {
-    if (!idCliente) return [];
-    // Simula compras baseadas no ID para ser consistente
-    const seed = idCliente * 17;
-    const compras = [
-        {
-            id: seed + 1,
-            data: '2026-03-28T14:30:00',
-            descricao: 'Compra #' + (seed + 1),
-            valor: 87.50,
-            status: 'pendente',
-        },
-        {
-            id: seed + 2,
-            data: '2026-04-02T09:15:00',
-            descricao: 'Compra #' + (seed + 2),
-            valor: 124.00,
-            status: 'pendente',
-        },
-        {
-            id: seed + 3,
-            data: '2026-04-05T16:45:00',
-            descricao: 'Compra #' + (seed + 3),
-            valor: 56.75,
-            status: 'pago',
-            dataPagamento: '2026-04-06T10:00:00',
-        },
-        {
-            id: seed + 4,
-            data: '2026-04-09T11:20:00',
-            descricao: 'Compra #' + (seed + 4),
-            valor: 200.00,
-            status: 'pendente',
-        },
-    ];
-    return compras;
-}
+// Perfis que podem registrar pagamento (quitar saldo devedor) de convênio —
+// mesmo grupo que já autoriza cancelamento de venda no backend.
+const PERFIS_PAGAMENTO = ['admin', 'supervisor', 'tecnico'];
 
 function ModalConvenio({ isOpen, onClose, cliente, onUpdate }) {
-    const [compras, setCompras] = useState([]);
+    const { formasPagamento, dadosEmpresa } = useConfig();
+    const { user } = useAuth();
+    const { showNotification } = useNotification();
+
+    const [dadosConvenio, setDadosConvenio] = useState(null);
+    const [carregando, setCarregando] = useState(false);
+
     const [modalPagamento, setModalPagamento] = useState(false);
-    const [valorPagamento, setValorPagamento] = useState('');
-    const [formaPagamento, setFormaPagamento] = useState('dinheiro');
+    const [formaPagamento, setFormaPagamento] = useState('');
     const [observacaoPagamento, setObservacaoPagamento] = useState('');
     const [pagando, setPagando] = useState(false);
-    const [compraParaPagar, setCompraParaPagar] = useState(null); // null = pagar tudo
+    const [lancamentoParaPagar, setLancamentoParaPagar] = useState(null); // null = pagar tudo
+    const [ultimoRecibo, setUltimoRecibo] = useState(null);
+
+    const podeProcessarPagamento = PERFIS_PAGAMENTO.includes(user?.tipo);
+    const formasParaQuitar = formasPagamento.filter((f) => f.especial !== 'convenio');
 
     const fmt = (val) =>
         Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -60,67 +40,108 @@ function ModalConvenio({ isOpen, onClose, cliente, onUpdate }) {
             hour: '2-digit', minute: '2-digit',
         });
 
+    async function carregarConvenio() {
+        if (!cliente) return;
+        setCarregando(true);
+        try {
+            const res = await api.get(`/clientes/${cliente.idCliente}/convenio`);
+            setDadosConvenio(res.data);
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao carregar convênio', 'error');
+        } finally {
+            setCarregando(false);
+        }
+    }
+
     useEffect(() => {
         if (isOpen && cliente) {
-            // TODO: substituir por api.get(`/convenio/${cliente.idCliente}`)
-            setCompras(gerarComprasMock(cliente.idCliente));
+            setUltimoRecibo(null);
+            carregarConvenio();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, cliente]);
 
-    const comprasPendentes = compras.filter((c) => c.status === 'pendente');
-    const comprasPagas = compras.filter((c) => c.status === 'pago');
-    const totalDevedor = comprasPendentes.reduce((s, c) => s + c.valor, 0);
-    const limiteUsado = totalDevedor;
-    const limiteTotal = cliente?.limiteConvenio || 0;
-    const limiteDisponivel = Math.max(0, limiteTotal - limiteUsado);
-    const percentualUsado = limiteTotal > 0 ? Math.min(100, (limiteUsado / limiteTotal) * 100) : 0;
+    const lancamentos = dadosConvenio?.lancamentos || [];
+    const pendentes = lancamentos.filter((l) => l.status === 'pendente');
+    const pagos = lancamentos.filter((l) => l.status === 'pago');
+    const totalDevedor = dadosConvenio?.saldoDevedor || 0;
+    const limiteTotal = dadosConvenio?.limiteConvenio || 0;
+    const limiteDisponivel = Math.max(0, limiteTotal - totalDevedor);
+    const percentualUsado = limiteTotal > 0 ? Math.min(100, (totalDevedor / limiteTotal) * 100) : 0;
 
     function abrirPagamentoTotal() {
-        setCompraParaPagar(null);
-        setValorPagamento(totalDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
-        setFormaPagamento('dinheiro');
+        setLancamentoParaPagar(null);
+        setFormaPagamento(formasParaQuitar[0]?.value || '');
         setObservacaoPagamento('');
         setModalPagamento(true);
     }
 
-    function abrirPagamentoItem(compra) {
-        setCompraParaPagar(compra);
-        setValorPagamento(compra.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
-        setFormaPagamento('dinheiro');
+    function abrirPagamentoItem(lancamento) {
+        setLancamentoParaPagar(lancamento);
+        setFormaPagamento(formasParaQuitar[0]?.value || '');
         setObservacaoPagamento('');
         setModalPagamento(true);
     }
 
     async function confirmarPagamento() {
+        const idsLancamentos = lancamentoParaPagar
+            ? [lancamentoParaPagar.idLancamento]
+            : pendentes.map((l) => l.idLancamento);
+
+        if (idsLancamentos.length === 0) return;
+
         setPagando(true);
         try {
-            // TODO: chamar api.post('/convenio/pagamento', { ... })
-            await new Promise((r) => setTimeout(r, 800)); // simula delay
-
-            if (compraParaPagar) {
-                setCompras((prev) =>
-                    prev.map((c) =>
-                        c.id === compraParaPagar.id
-                            ? { ...c, status: 'pago', dataPagamento: new Date().toISOString() }
-                            : c
-                    )
-                );
-            } else {
-                // Pagar tudo
-                setCompras((prev) =>
-                    prev.map((c) =>
-                        c.status === 'pendente'
-                            ? { ...c, status: 'pago', dataPagamento: new Date().toISOString() }
-                            : c
-                    )
-                );
-            }
-
+            const res = await api.post(`/clientes/${cliente.idCliente}/convenio/pagamento`, {
+                idsLancamentos,
+                formaPagamento,
+                observacao: observacaoPagamento,
+            });
+            showNotification('Pagamento registrado com sucesso!', 'success');
+            setUltimoRecibo(res.data.recibo);
             setModalPagamento(false);
+            await carregarConvenio();
             if (onUpdate) onUpdate();
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao registrar pagamento', 'error');
         } finally {
             setPagando(false);
         }
+    }
+
+    function gerarPDFRecibo(recibo) {
+        const doc = new jsPDF({ orientation: 'portrait' });
+
+        doc.setFontSize(16);
+        doc.setTextColor(15, 23, 42);
+        doc.text('Recibo de Pagamento — Convênio', 14, 20);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        let y = 28;
+        const nomeEmpresa = dadosEmpresa?.cadastro?.nomeFantasia || dadosEmpresa?.cadastro?.razaoSocial;
+        if (nomeEmpresa) { doc.text(nomeEmpresa, 14, y); y += 6; }
+        doc.text(`Cliente: ${recibo.cliente?.nome || cliente?.nome || ''}`, 14, y); y += 6;
+        if (recibo.cliente?.cpf) { doc.text(`CPF: ${recibo.cliente.cpf}`, 14, y); y += 6; }
+        doc.text(`Forma de pagamento: ${labelFormaPagamento(recibo.formaPagamento, formasPagamento)}`, 14, y); y += 6;
+        doc.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 14, y); y += 6;
+        if (recibo.observacao) { doc.text(`Observação: ${recibo.observacao}`, 14, y); y += 6; }
+
+        autoTable(doc, {
+            head: [['Venda', 'Valor']],
+            body: recibo.lancamentos.map((l) => [`#${l.idVenda}`, fmt(l.valor)]),
+            startY: y + 4,
+            styles: { fontSize: 9, cellPadding: 4, textColor: [30, 41, 59] },
+            headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+        });
+
+        doc.setFontSize(12);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`Total pago: ${fmt(recibo.valorTotal)}`, 14, doc.lastAutoTable.finalY + 10);
+
+        doc.save(`recibo_convenio_${recibo.idPagamento}.pdf`);
+        showNotification('PDF gerado com sucesso!', 'success');
     }
 
     if (!cliente) return null;
@@ -132,134 +153,152 @@ function ModalConvenio({ isOpen, onClose, cliente, onUpdate }) {
                 onClose={onClose}
                 title={`Convênio — ${cliente.nome}`}
                 maxWidth="720px"
+                closeOnOverlayClick={false}
                 footer={
                     <div className="convenio-modal-footer">
                         <button className="btn-modal-cancel" onClick={onClose}>Fechar</button>
-                        {totalDevedor > 0 && (
+                        {podeProcessarPagamento && totalDevedor > 0 && (
                             <button className="btn-modal-confirm btn-pagar-tudo" onClick={abrirPagamentoTotal}>
-                                💳 Pagar Tudo ({fmt(totalDevedor)})
+                                Pagar Total: {fmt(totalDevedor)}
                             </button>
                         )}
                     </div>
                 }
             >
-                {/* ── Cards de resumo ── */}
-                <div className="convenio-resumo-grid">
-                    <div className="convenio-resumo-card convenio-card-devedor">
-                        <span className="convenio-card-label">Saldo Devedor</span>
-                        <span className="convenio-card-valor devedor">{fmt(totalDevedor)}</span>
-                        <span className="convenio-card-sub">{comprasPendentes.length} compra(s) pendente(s)</span>
-                    </div>
-                    <div className="convenio-resumo-card convenio-card-limite">
-                        <span className="convenio-card-label">Limite Total</span>
-                        <span className="convenio-card-valor">{fmt(limiteTotal)}</span>
-                        <span className="convenio-card-sub">Disponível: {fmt(limiteDisponivel)}</span>
-                    </div>
-                    <div className="convenio-resumo-card convenio-card-pago">
-                        <span className="convenio-card-label">Total Pago</span>
-                        <span className="convenio-card-valor pago">
-                            {fmt(comprasPagas.reduce((s, c) => s + c.valor, 0))}
-                        </span>
-                        <span className="convenio-card-sub">{comprasPagas.length} compra(s) quitada(s)</span>
-                    </div>
-                </div>
-
-                {/* ── Barra de uso do limite ── */}
-                {limiteTotal > 0 && (
-                    <div className="convenio-limite-bar-wrapper">
-                        <div className="convenio-limite-bar-header">
-                            <span>Uso do Limite</span>
-                            <span className={percentualUsado >= 80 ? 'limite-critico' : ''}>
-                                {percentualUsado.toFixed(0)}%
-                            </span>
-                        </div>
-                        <div className="convenio-limite-bar">
-                            <div
-                                className={`convenio-limite-fill ${percentualUsado >= 90 ? 'fill-critico' : percentualUsado >= 60 ? 'fill-alerta' : 'fill-ok'}`}
-                                style={{ width: `${percentualUsado}%` }}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Compras Pendentes ── */}
-                <div className="convenio-section-title">
-                    <span>⏳ Compras Pendentes</span>
-                    {comprasPendentes.length === 0 && (
-                        <span className="convenio-vazio-tag">Nenhuma pendência</span>
-                    )}
-                </div>
-
-                {comprasPendentes.length > 0 && (
-                    <div className="convenio-table-wrapper">
-                        <table className="convenio-table">
-                            <thead>
-                                <tr>
-                                    <th>Data</th>
-                                    <th>Descrição</th>
-                                    <th>Valor</th>
-                                    <th>Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {comprasPendentes.map((c) => (
-                                    <tr key={c.id}>
-                                        <td className="convenio-td-data">{fmtData(c.data)}</td>
-                                        <td>{c.descricao}</td>
-                                        <td className="convenio-td-valor pendente">{fmt(c.valor)}</td>
-                                        <td>
-                                            <button
-                                                className="btn-pagar-item"
-                                                onClick={() => abrirPagamentoItem(c)}
-                                            >
-                                                Pagar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-
-                {/* ── Compras Pagas ── */}
-                {comprasPagas.length > 0 && (
-                    <>
-                        <div className="convenio-section-title">
-                            <span>✅ Compras Quitadas</span>
-                        </div>
-                        <div className="convenio-table-wrapper">
-                            <table className="convenio-table">
-                                <thead>
-                                    <tr>
-                                        <th>Data da Compra</th>
-                                        <th>Descrição</th>
-                                        <th>Valor</th>
-                                        <th>Pago em</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {comprasPagas.map((c) => (
-                                        <tr key={c.id} className="compra-paga-row">
-                                            <td className="convenio-td-data">{fmtData(c.data)}</td>
-                                            <td>{c.descricao}</td>
-                                            <td className="convenio-td-valor pago">{fmt(c.valor)}</td>
-                                            <td className="convenio-td-data">
-                                                {c.dataPagamento ? fmtData(c.dataPagamento) : '-'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
-                )}
-
-                {compras.length === 0 && (
+                {carregando && !dadosConvenio ? (
                     <div className="convenio-empty">
-                        <span>📋</span>
-                        <p>Nenhuma compra registrada neste convênio</p>
+                        <p>Carregando dados do convênio...</p>
                     </div>
+                ) : (
+                    <>
+                        {ultimoRecibo && (
+                            <div className="convenio-recibo-banner">
+                                <span>Pagamento de {fmt(ultimoRecibo.valorTotal)} registrado</span>
+                                <button onClick={() => gerarPDFRecibo(ultimoRecibo)}>Baixar recibo em PDF</button>
+                            </div>
+                        )}
+
+                        {/* ── Cards de resumo ── */}
+                        <div className="convenio-resumo-grid">
+                            <div className="convenio-resumo-card convenio-card-devedor">
+                                <span className="convenio-card-label">Saldo Devedor</span>
+                                <span className="convenio-card-valor devedor">{fmt(totalDevedor)}</span>
+                                <span className="convenio-card-sub">{pendentes.length} lançamento(s) pendente(s)</span>
+                            </div>
+                            <div className="convenio-resumo-card convenio-card-limite">
+                                <span className="convenio-card-label">Limite Total</span>
+                                <span className="convenio-card-valor">{fmt(limiteTotal)}</span>
+                                <span className="convenio-card-sub">Disponível: {fmt(limiteDisponivel)}</span>
+                            </div>
+                            <div className="convenio-resumo-card convenio-card-pago">
+                                <span className="convenio-card-label">Total Pago</span>
+                                <span className="convenio-card-valor pago">
+                                    {fmt(pagos.reduce((s, l) => s + l.valor, 0))}
+                                </span>
+                                <span className="convenio-card-sub">{pagos.length} lançamento(s) quitado(s)</span>
+                            </div>
+                        </div>
+
+                        {/* ── Barra de uso do limite ── */}
+                        {limiteTotal > 0 && (
+                            <div className="convenio-limite-bar-wrapper">
+                                <div className="convenio-limite-bar-header">
+                                    <span>Uso do Limite</span>
+                                    <span className={percentualUsado >= 80 ? 'limite-critico' : ''}>
+                                        {percentualUsado.toFixed(0)}%
+                                    </span>
+                                </div>
+                                <div className="convenio-limite-bar">
+                                    <div
+                                        className={`convenio-limite-fill ${percentualUsado >= 90 ? 'fill-critico' : percentualUsado >= 60 ? 'fill-alerta' : 'fill-ok'}`}
+                                        style={{ width: `${percentualUsado}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── Lançamentos Pendentes ── */}
+                        <div className="convenio-section-title">
+                            <span>Lançamentos Pendentes</span>
+                            {pendentes.length === 0 && (
+                                <span className="convenio-vazio-tag">Nenhuma pendência</span>
+                            )}
+                        </div>
+
+                        {pendentes.length > 0 && (
+                            <div className="convenio-table-wrapper">
+                                <table className="convenio-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Descrição</th>
+                                            <th>Valor</th>
+                                            {podeProcessarPagamento && <th>Ação</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {pendentes.map((l) => (
+                                            <tr key={l.idLancamento}>
+                                                <td className="convenio-td-data">{fmtData(l.dataLancamento)}</td>
+                                                <td>Venda #{l.idVenda}</td>
+                                                <td className="convenio-td-valor pendente">{fmt(l.valor)}</td>
+                                                {podeProcessarPagamento && (
+                                                    <td>
+                                                        <button
+                                                            className="btn-pagar-item"
+                                                            onClick={() => abrirPagamentoItem(l)}
+                                                        >
+                                                            Pagar
+                                                        </button>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* ── Lançamentos Quitados ── */}
+                        {pagos.length > 0 && (
+                            <>
+                                <div className="convenio-section-title">
+                                    <span>Lançamentos Quitados</span>
+                                </div>
+                                <div className="convenio-table-wrapper">
+                                    <table className="convenio-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Data da Venda</th>
+                                                <th>Descrição</th>
+                                                <th>Valor</th>
+                                                <th>Pago em</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pagos.map((l) => (
+                                                <tr key={l.idLancamento} className="compra-paga-row">
+                                                    <td className="convenio-td-data">{fmtData(l.dataLancamento)}</td>
+                                                    <td>Venda #{l.idVenda}</td>
+                                                    <td className="convenio-td-valor pago">{fmt(l.valor)}</td>
+                                                    <td className="convenio-td-data">
+                                                        {l.dataPagamento ? fmtData(l.dataPagamento) : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
+
+                        {lancamentos.length === 0 && (
+                            <div className="convenio-empty">
+                                <span>📋</span>
+                                <p>Nenhum lançamento registrado neste convênio</p>
+                            </div>
+                        )}
+                    </>
                 )}
             </Modal>
 
@@ -267,9 +306,10 @@ function ModalConvenio({ isOpen, onClose, cliente, onUpdate }) {
             <Modal
                 isOpen={modalPagamento}
                 onClose={() => setModalPagamento(false)}
-                title={compraParaPagar ? `Pagar Compra #${compraParaPagar.id}` : 'Pagar Saldo Total'}
+                title={lancamentoParaPagar ? `Pagar Venda #${lancamentoParaPagar.idVenda}` : 'Pagar Saldo Total'}
                 maxWidth="420px"
                 onConfirm={confirmarPagamento}
+                closeOnOverlayClick={false}
                 footer={
                     <>
                         <button className="btn-modal-cancel" onClick={() => setModalPagamento(false)}>
@@ -287,17 +327,17 @@ function ModalConvenio({ isOpen, onClose, cliente, onUpdate }) {
             >
                 <div className="pagamento-convenio-info">
                     <span className="pagamento-convenio-cliente">{cliente.nome}</span>
-                    <span className="pagamento-convenio-valor">{fmt(compraParaPagar ? compraParaPagar.valor : totalDevedor)}</span>
+                    <span className="pagamento-convenio-valor">
+                        {fmt(lancamentoParaPagar ? lancamentoParaPagar.valor : totalDevedor)}
+                    </span>
                 </div>
 
                 <div className="form-group">
                     <label>Forma de Pagamento</label>
                     <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)}>
-                        <option value="dinheiro">Dinheiro</option>
-                        <option value="pix">PIX</option>
-                        <option value="cartao_debito">Cartão de Débito</option>
-                        <option value="cartao_credito">Cartão de Crédito</option>
-                        <option value="outro">Outro</option>
+                        {formasParaQuitar.map((f) => (
+                            <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
                     </select>
                 </div>
 
@@ -309,10 +349,6 @@ function ModalConvenio({ isOpen, onClose, cliente, onUpdate }) {
                         placeholder="Ex: Pago em duas vezes..."
                         rows={2}
                     />
-                </div>
-
-                <div className="pagamento-convenio-aviso">
-                    ⚠️ Este registro é local (protótipo). O backend será integrado em breve.
                 </div>
             </Modal>
         </>

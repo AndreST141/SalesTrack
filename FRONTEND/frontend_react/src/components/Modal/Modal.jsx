@@ -1,15 +1,16 @@
 import { useEffect, useCallback } from 'react';
 import './style.css';
 
-function Modal({ 
-    isOpen, 
+function Modal({
+    isOpen,
     onClose,
-    title, 
-    children, 
-    footer, 
-    maxWidth = '600px', 
-    onConfirm,  
+    title,
+    children,
+    footer,
+    maxWidth = '600px',
+    onConfirm,
     className = '',
+    closeOnOverlayClick = true,
 }) {
     const handleKeyDown = useCallback((e) => {
         if (e.key === 'Enter') {
@@ -34,7 +35,7 @@ function Modal({
     if (!isOpen) return null;
 
     return (
-        <div className="body-modal" onClick={onClose}>
+        <div className="body-modal" onClick={closeOnOverlayClick ? onClose : undefined}>
             <div
                 className={`modal-container ${className}`}
                 style={{ maxWidth }}
