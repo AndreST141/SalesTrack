@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 from app.Repositories.auth_repository import AuthRepository
 from app.Repositories.produto_repository import ProdutoRepository
 from app.Repositories.cliente_repository import ClienteRepository
-from app.Repositories.venda_repository import VendaRepository, EstoqueInsuficienteError
+from app.Repositories.venda_repository import VendaRepository, EstoqueInsuficienteError, ConvenioPagamentoExistenteError
 from app.Repositories.configuracao_repository import ConfiguracaoRepository
 from app.Repositories.licenca_repository import LicencaRepository
 from app.Repositories.categoria_repository import CategoriaRepository, DashboardRepository
@@ -260,8 +260,8 @@ class TestRepositoriesUnit:
 
         # First query: check status
         mock_cursor.fetchone.return_value = {'idVenda': 5, 'status': 'concluida'}
-        # Second query: fetch items
-        mock_cursor.fetchall.return_value = [{'idProduto': 10, 'quantidade': 3}]
+        # fetchall #1: convenio entries (none) / fetchall #2: sale items
+        mock_cursor.fetchall.side_effect = [[], [{'idProduto': 10, 'quantidade': 3}]]
 
         result = VendaRepository.cancel(id=5, cancelado_por='Admin QA', autorizado_por='Supervisor QA')
         assert result is True
@@ -271,7 +271,49 @@ class TestRepositoriesUnit:
         assert any("UPDATE Produto SET estoque = estoque +" in sql for sql in executed_sqls)
         # Check sale status update
         assert any("UPDATE Venda SET status = 'cancelada'" in sql for sql in executed_sqls)
+        # No convenio entries -> nothing to delete
+        assert not any("DELETE FROM ConvenioLancamento" in sql for sql in executed_sqls)
         mock_conn.commit.assert_called()
+
+    @patch('app.Repositories.venda_repository.get_db_connection')
+    def test_venda_repo_cancel_releases_pending_convenio(self, mock_get_conn):
+        """Validates that cancelling a sale with a pending convenio entry deletes it (frees the limit)."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = {'idVenda': 7, 'status': 'concluida'}
+        mock_cursor.fetchall.side_effect = [
+            [{'idLancamento': 1, 'status': 'pendente'}],
+            [{'idProduto': 10, 'quantidade': 1}],
+        ]
+
+        assert VendaRepository.cancel(id=7, cancelado_por='Admin QA') is True
+        executed_sqls = [call[0][0] for call in mock_cursor.execute.call_args_list]
+        assert any("FROM ConvenioLancamento WHERE idVenda = %s FOR UPDATE" in sql for sql in executed_sqls)
+        assert any("DELETE FROM ConvenioLancamento" in sql for sql in executed_sqls)
+        mock_conn.commit.assert_called()
+
+    @patch('app.Repositories.venda_repository.get_db_connection')
+    def test_venda_repo_cancel_blocked_by_paid_convenio(self, mock_get_conn):
+        """Validates that a sale whose convenio entry was already paid cannot be cancelled (rollback)."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = {'idVenda': 8, 'status': 'concluida'}
+        mock_cursor.fetchall.side_effect = [[{'idLancamento': 2, 'status': 'pago'}]]
+
+        with pytest.raises(ConvenioPagamentoExistenteError):
+            VendaRepository.cancel(id=8, cancelado_por='Admin QA')
+
+        executed_sqls = [call[0][0] for call in mock_cursor.execute.call_args_list]
+        assert not any("UPDATE Produto SET estoque" in sql for sql in executed_sqls)
+        assert not any("UPDATE Venda SET status = 'cancelada'" in sql for sql in executed_sqls)
+        mock_conn.rollback.assert_called()
+        mock_conn.commit.assert_not_called()
 
     @patch('app.Repositories.venda_repository.get_db_connection')
     def test_venda_repo_cancel_already_cancelled(self, mock_get_conn):

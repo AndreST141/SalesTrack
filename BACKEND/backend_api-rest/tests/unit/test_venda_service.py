@@ -7,7 +7,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 from app.Services.venda_service import VendaService
-from app.Repositories.venda_repository import EstoqueInsuficienteError
+from app.Repositories.venda_repository import EstoqueInsuficienteError, ConvenioPagamentoExistenteError
 from app.Constants.geral import Geral
 
 class TestVendaServiceUnit:
@@ -56,6 +56,7 @@ class TestVendaServiceUnit:
     def test_validar_pagamentos_underpayment(self):
         """Validates RNE-005: underpayment is rejected."""
         dados = {
+            'formaPagamento': 'pix',
             'valorFinal': 100.00,
             'pagamentos': [
                 {'forma': 'pix', 'valor': 50.00},
@@ -69,6 +70,7 @@ class TestVendaServiceUnit:
     def test_validar_pagamentos_overpayment_without_cash_rejected(self):
         """Validates that paying more than total with card/pix is rejected (only cash gives change)."""
         dados = {
+            'formaPagamento': 'cartao_credito',
             'valorFinal': 50.00,
             'pagamentos': [
                 {'forma': 'cartao_credito', 'valor': 60.00}
@@ -81,6 +83,7 @@ class TestVendaServiceUnit:
     def test_validar_pagamentos_overpayment_with_cash_allowed(self):
         """Validates that cash payment exceeding total is allowed (generates change)."""
         dados = {
+            'formaPagamento': 'dinheiro',
             'valorFinal': 50.00,
             'pagamentos': [
                 {'forma': 'dinheiro', 'valor': 60.00}
@@ -92,6 +95,7 @@ class TestVendaServiceUnit:
     def test_validar_pagamentos_split_exact_sum(self):
         """Validates split payment matching exact total with multiple methods."""
         dados = {
+            'formaPagamento': 'pix',
             'valorFinal': 125.50,
             'pagamentos': [
                 {'forma': 'pix', 'valor': 50.00},
@@ -101,6 +105,55 @@ class TestVendaServiceUnit:
         }
         erro = VendaService._validar_pagamentos(dados)
         assert erro is None
+
+    def test_validar_pagamentos_invalid_payment_method(self):
+        """Validates that missing/empty/too long payment methods are rejected (VARCHAR(50) column)."""
+        casos = [
+            {'valorFinal': 10.0, 'pagamentos': [{'forma': 'pix', 'valor': 10.0}]},
+            {'formaPagamento': '   ', 'valorFinal': 10.0},
+            {'formaPagamento': 'pix', 'valorFinal': 10.0, 'pagamentos': [{'forma': '', 'valor': 10.0}]},
+            {'formaPagamento': 'x' * 51, 'valorFinal': 10.0},
+        ]
+        for dados in casos:
+            assert VendaService._validar_pagamentos(dados) == 'Forma de pagamento inválida.'
+
+    @patch('app.Services.venda_service.ClienteRepository.get_saldo_convenio')
+    def test_validar_pagamentos_convenio_within_limit(self, mock_saldo):
+        """Validates that a convenio payment within the customer's limit is accepted."""
+        mock_saldo.return_value = {'convenio': True, 'limiteConvenio': 200.0, 'saldoDevedor': 50.0}
+        dados = {
+            'formaPagamento': 'convenio',
+            'valorFinal': 100.0,
+            'pagamentos': [{'forma': 'convenio', 'valor': 100.0, 'idClienteConvenio': 4}]
+        }
+        assert VendaService._validar_pagamentos(dados) is None
+        mock_saldo.assert_called_once_with(4)
+
+    @patch('app.Services.venda_service.ClienteRepository.get_saldo_convenio')
+    def test_validar_pagamentos_convenio_limit_exceeded(self, mock_saldo):
+        """Validates that debt + new purchase above the limit is rejected."""
+        mock_saldo.return_value = {'convenio': True, 'limiteConvenio': 200.0, 'saldoDevedor': 150.0}
+        dados = {
+            'formaPagamento': 'convenio',
+            'valorFinal': 100.0,
+            'pagamentos': [{'forma': 'convenio', 'valor': 100.0, 'idClienteConvenio': 4}]
+        }
+        erro = VendaService._validar_pagamentos(dados)
+        assert "Limite de convênio excedido" in erro
+
+    @patch('app.Services.venda_service.ClienteRepository.get_saldo_convenio')
+    def test_validar_pagamentos_convenio_customer_not_enabled(self, mock_saldo):
+        """Validates that convenio payment requires an enabled customer with a configured limit."""
+        dados = {
+            'formaPagamento': 'convenio',
+            'valorFinal': 30.0,
+            'pagamentos': [{'forma': 'convenio', 'valor': 30.0, 'idClienteConvenio': 9}]
+        }
+        mock_saldo.return_value = {'convenio': False, 'limiteConvenio': None, 'saldoDevedor': 0}
+        assert "não está habilitado para convênio" in VendaService._validar_pagamentos(dados)
+
+        mock_saldo.return_value = {'convenio': True, 'limiteConvenio': None, 'saldoDevedor': 0}
+        assert "não possui limite" in VendaService._validar_pagamentos(dados)
 
     @patch('app.Services.venda_service.VendaRepository.create')
     def test_create_insufficient_stock_error(self, mock_repo_create):
@@ -173,3 +226,11 @@ class TestVendaServiceUnit:
         res = VendaService.cancel(id=10, usuario_tipo='admin', usuario_nome='Admin')
         assert res['status'] == 400
         assert res['error'] == Geral.VENDA_JA_CANCELADA
+
+    @patch('app.Services.venda_service.VendaRepository.cancel')
+    def test_cancel_blocked_by_paid_convenio(self, mock_cancel):
+        """Validates 409 when the sale's convenio entry was already paid."""
+        mock_cancel.side_effect = ConvenioPagamentoExistenteError('pago')
+        res = VendaService.cancel(id=11, usuario_tipo='supervisor', usuario_nome='Supervisor')
+        assert res['status'] == 409
+        assert res['error'] == Geral.VENDA_CANCEL_BLOQUEADA_CONVENIO_PAGO

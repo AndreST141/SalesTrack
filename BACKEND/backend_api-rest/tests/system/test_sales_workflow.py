@@ -18,8 +18,9 @@ from app.Constants.geral import Geral
 class TestSalesWorkflowSystem:
 
     @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
-    @patch('app.Services.auth_service.LicencaService.licenca_permite_acesso')
+    @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
     @patch('app.Services.produto_service.ProdutoRepository.get_all')
+    @patch('app.Services.cliente_service.ClienteRepository.find_by_cpf')
     @patch('app.Services.cliente_service.ClienteRepository.create')
     @patch('app.Services.venda_service.VendaRepository.create')
     @patch('app.Services.venda_service.VendaRepository.find_with_itens')
@@ -32,13 +33,14 @@ class TestSalesWorkflowSystem:
         mock_find_sale,
         mock_create_sale,
         mock_create_client,
+        mock_find_cpf,
         mock_get_products,
-        mock_licenca,
+        mock_motivo_bloqueio,
         mock_find_user,
         client
     ):
         # 1. Autenticação do vendedor
-        mock_licenca.return_value = True
+        mock_motivo_bloqueio.return_value = None
         mock_find_user.return_value = {
             'idUsuario': 20,
             'nome': 'Rafael Operador',
@@ -61,8 +63,9 @@ class TestSalesWorkflowSystem:
         assert len(catalog) == 2
 
         # 3. Cadastro do cliente na hora da venda
+        mock_find_cpf.return_value = None
         mock_create_client.return_value = 88
-        client_data = {'nome': 'Cliente Balcão', 'cpf': '111.222.333-44', 'telefone': '62988889999'}
+        client_data = {'nome': 'Cliente Balcão', 'cpf': '529.982.247-25', 'telefone': '62988889999'}
         res_client = client.post('/api/clientes', headers=headers, json=client_data)
         assert res_client.status_code == 201
         client_id = res_client.get_json()['id']

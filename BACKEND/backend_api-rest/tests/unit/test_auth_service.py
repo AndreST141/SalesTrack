@@ -60,10 +60,10 @@ class TestAuthServiceUnit:
         assert "Muitas tentativas" in res_blocked['error']
 
     @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
-    @patch('app.Services.auth_service.LicencaService.licenca_permite_acesso')
-    def test_login_success_admin(self, mock_licenca, mock_find):
+    @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
+    def test_login_success_admin(self, mock_motivo, mock_find):
         """Validates successful login for an admin user."""
-        mock_licenca.return_value = True
+        mock_motivo.return_value = None
         mock_find.return_value = {
             'idUsuario': 10,
             'nome': 'Gestor Teste',
@@ -80,10 +80,10 @@ class TestAuthServiceUnit:
         assert active_tokens[token]['tipo'] == 'admin'
 
     @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
-    @patch('app.Services.auth_service.LicencaService.licenca_permite_acesso')
-    def test_login_blocked_by_inactive_license(self, mock_licenca, mock_find):
+    @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
+    def test_login_blocked_by_inactive_license(self, mock_motivo, mock_find):
         """Validates that an inactive license blocks common users (vendedor/admin)."""
-        mock_licenca.return_value = False
+        mock_motivo.return_value = 'Licença inativa ou vencida. Entre em contato com o suporte.'
         mock_find.return_value = {
             'idUsuario': 2,
             'nome': 'Vendedor 1',
@@ -94,12 +94,29 @@ class TestAuthServiceUnit:
         res = AuthService.login("vendedor@salestrack.com", "senha123")
         assert res['status'] == 403
         assert "Licença inativa" in res['error']
+        assert res.get('token') is None
 
     @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
-    @patch('app.Services.auth_service.LicencaService.licenca_permite_acesso')
-    def test_login_tecnico_bypasses_license_restriction(self, mock_licenca, mock_find):
+    @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
+    def test_login_blocked_by_missing_company_data(self, mock_motivo, mock_find):
+        """Validates that the 403 carries the exact reason when company data is not configured yet."""
+        mock_motivo.return_value = 'Sistema aguardando configuração dos dados da empresa. Entre em contato com o suporte técnico.'
+        mock_find.return_value = {
+            'idUsuario': 1,
+            'nome': 'Admin',
+            'email': 'admin@salestrack.com',
+            'tipo': 'admin'
+        }
+
+        res = AuthService.login("admin@salestrack.com", "admin123")
+        assert res['status'] == 403
+        assert "dados da empresa" in res['error']
+
+    @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
+    @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
+    def test_login_tecnico_bypasses_license_restriction(self, mock_motivo, mock_find):
         """Validates that a tecnico user can log in even when the license is inactive."""
-        mock_licenca.return_value = False
+        mock_motivo.return_value = 'Licença inativa ou vencida. Entre em contato com o suporte.'
         mock_find.return_value = {
             'idUsuario': 99,
             'nome': 'Técnico de Suporte',
@@ -111,6 +128,7 @@ class TestAuthServiceUnit:
         assert res['status'] == 200
         assert 'token' in res
         assert res['user']['tipo'] == 'tecnico'
+        mock_motivo.assert_not_called()
 
     def test_logout_active_token(self):
         """Validates that logout removes the token from active_tokens dictionary."""

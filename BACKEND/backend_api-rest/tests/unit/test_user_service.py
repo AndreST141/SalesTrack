@@ -64,16 +64,49 @@ class TestUserServiceUnit:
         assert res['status'] == 400
         assert "mínimo 4 caracteres" in res['error']
 
+    @patch('app.Services.user_service.UserRepository.existe_gerenciavel')
     @patch('app.Services.user_service.UserRepository.update')
-    def test_update_success(self, mock_update):
+    def test_update_success(self, mock_update, mock_existe):
         """Validates successful user update."""
+        mock_existe.return_value = True
         res = UserService.update(1, {'nome': 'Admin Renomeado', 'tipo': 'admin', 'senha': 'nova_senha_forte'})
         assert res['status'] == 200
         assert "sucesso" in res['message']
+        mock_update.assert_called_once_with(1, 'Admin Renomeado', 'admin', 'nova_senha_forte')
 
+    @patch('app.Services.user_service.UserRepository.existe_gerenciavel')
+    @patch('app.Services.user_service.UserRepository.update')
+    def test_update_not_manageable(self, mock_update, mock_existe):
+        """Validates that a nonexistent (or tecnico) user cannot be edited through the screen."""
+        mock_existe.return_value = False
+        res = UserService.update(99, {'nome': 'Técnico', 'tipo': 'admin'})
+        assert res['status'] == 404
+        assert res['error'] == Geral.USUARIO_NAO_ENCONTRADO
+        mock_update.assert_not_called()
+
+    @patch('app.Services.user_service.UserRepository.existe_gerenciavel')
     @patch('app.Services.user_service.UserRepository.delete')
-    def test_delete_success(self, mock_delete):
+    def test_delete_success(self, mock_delete, mock_existe):
         """Validates user inativation/deletion."""
+        mock_existe.return_value = True
         res = UserService.delete(3)
         assert res['status'] == 200
         assert "inativado" in res['message']
+        mock_delete.assert_called_once_with(3)
+
+    @patch('app.Services.user_service.UserRepository.existe_gerenciavel')
+    @patch('app.Services.user_service.UserRepository.delete')
+    def test_delete_not_manageable(self, mock_delete, mock_existe):
+        """Validates that a nonexistent (or tecnico) user cannot be inactivated."""
+        mock_existe.return_value = False
+        res = UserService.delete(99, solicitante_id=1)
+        assert res['status'] == 404
+        mock_delete.assert_not_called()
+
+    @patch('app.Services.user_service.UserRepository.delete')
+    def test_delete_self_blocked(self, mock_delete):
+        """Validates that an admin cannot inactivate their own user (lock-out protection)."""
+        res = UserService.delete(1, solicitante_id=1)
+        assert res['status'] == 400
+        assert "próprio usuário" in res['error']
+        mock_delete.assert_not_called()

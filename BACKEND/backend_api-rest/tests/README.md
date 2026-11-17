@@ -56,21 +56,32 @@ tests/
 
 ## 3. Instalação das Dependências
 
-Para instalar as dependências de testes no seu ambiente virtual Python:
+### 3.1. Via Docker (recomendado — mesmo Python 3.11 da produção)
+
+Não precisa de Python instalado na máquina. A partir da raiz do projeto (PowerShell), com a imagem `salestrack-backend` já construída pelo `docker compose`:
+
+```powershell
+docker run --rm -v "${PWD}\BACKEND\backend_api-rest:/src" -w /src salestrack-backend sh -c "pip install -q -r requirements-dev.txt && python -m pytest -v"
+```
+
+O container roda fora da rede do Compose, então não alcança o banco real — e nem precisa: todo acesso ao banco é mockado.
+
+### 3.2. Via ambiente virtual Python local
 
 ```bash
-# A partir da raiz do projeto:
-pip install -r BACKEND/backend_api-rest/requirements-dev.txt
-
-# Ou se estiver dentro de BACKEND/backend_api-rest:
+# Dentro de BACKEND/backend_api-rest:
 pip install -r requirements-dev.txt
 ```
+
+> As versões fixadas em `requirements.txt` (bcrypt, mysql-connector) são as da imagem Docker (Python 3.11). Em versões muito novas do Python pode não haver pacote pronto para elas — nesse caso use o Docker.
+
+`requirements-dev.txt`, `pytest.ini` e a pasta `tests/` estão no `.dockerignore`, então não entram na imagem de produção.
 
 ---
 
 ## 4. Como Executar os Testes
 
-Graças aos arquivos de configuração `pytest.ini` configurados na raiz e no backend, os testes podem ser executados a partir de qualquer diretório:
+Os comandos abaixo devem ser executados **dentro de `BACKEND/backend_api-rest`** (onde fica o `pytest.ini`). Via Docker, troque `pytest` por `python -m pytest` no final do comando da seção 3.1.
 
 ### 4.1. Executar todos os testes
 ```bash
@@ -85,18 +96,18 @@ pytest -v
 ### 4.3. Executar apenas uma categoria de testes
 ```bash
 # Apenas testes unitários
-pytest BACKEND/backend_api-rest/tests/unit
+pytest tests/unit
 
 # Apenas testes de integração de API
-pytest BACKEND/backend_api-rest/tests/integration
+pytest tests/integration
 
 # Apenas testes de sistema / fluxos completos
-pytest BACKEND/backend_api-rest/tests/system
+pytest tests/system
 ```
 
 ### 4.4. Executar um arquivo de teste específico
 ```bash
-pytest BACKEND/backend_api-rest/tests/unit/test_auth_service.py
+pytest tests/unit/test_auth_service.py
 ```
 
 ### 4.5. Executar um cenário de teste específico pelo nome
@@ -117,15 +128,16 @@ pytest --cov=app --cov=middlewares --cov=routes --cov-report=term-missing
 
 ### 5.2. Relatório gráfico em HTML
 ```bash
-pytest --cov=app --cov=middlewares --cov=routes --cov-report=html:BACKEND/backend_api-rest/tests/coverage_html
+pytest --cov=app --cov=middlewares --cov=routes --cov-report=html:tests/coverage_html
 ```
 
 O relatório em HTML será gerado na pasta `tests/coverage_html/index.html`. Abra esse arquivo no navegador para visualizar linha por linha o código coberto e os pontos não atingidos.
 
 ### 5.3. Interpretação dos Resultados
 - **100% de Cobertura em Rotas e Middlewares:** Garante que todos os interceptadores de autenticação, checagem de tokens Bearer e serialização UTF-8 estão plenamente validados.
-- **95% a 100% em Serviços (Services):** Comprova que toda a lógica de negócio do sistema (descontos, troco, split payment, regras de bloqueio contra força bruta e cancelamento) opera conforme a especificação.
-- **97% nos Controladores (Controllers):** Confirma o tratamento de códigos de resposta HTTP (200, 201, 400, 401, 403, 404, 422, 429).
+- **Serviços (Services):** 100% em autenticação, clientes, licença e relatórios; 99% em produtos; 90% em vendas. Ainda baixos: `convenio_service` (21%) e `configuracao_service` (48%) — próximos candidatos a receber testes.
+- **86% nos Controladores (Controllers):** Confirma o tratamento de códigos de resposta HTTP (200, 201, 400, 401, 403, 404, 409, 422, 429).
+- **Total medido em 2026-11-14:** 171 testes, 71% de cobertura de linhas.
 - **Linhas faltantes nos Repositórios:** Correspondem às exceções de falha de conexão física com o MySQL quando o servidor de banco de dados não está em execução.
 
 ---

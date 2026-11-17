@@ -32,11 +32,13 @@ class TestProdutosApiIntegration:
         data = res.get_json()
         assert "Acesso não autorizado" in data['error']
 
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
     @patch('app.Services.produto_service.ProdutoRepository.create')
-    def test_post_produto_as_admin_success(self, mock_create, client, admin_headers):
+    def test_post_produto_as_admin_success(self, mock_create, mock_find_codigo, client, admin_headers):
         """Validates that admin can create products returning 201."""
+        mock_find_codigo.return_value = None
         mock_create.return_value = 100
-        dados = {'nome': 'Espetinho de Carne', 'preco': 7.00, 'estoque': 50, 'idCategoria': 1}
+        dados = {'nome': 'Espetinho de Carne', 'preco': 7.00, 'estoque': 50, 'idCategoria': 1, 'codigoBarras': '10'}
         res = client.post('/api/produtos', headers=admin_headers, json=dados)
         assert res.status_code == 201
         data = res.get_json()
@@ -55,13 +57,33 @@ class TestProdutosApiIntegration:
         res = client.put('/api/produtos/1', headers=vendedor_headers, json={'nome': 'Update', 'preco': 10.0})
         assert res.status_code == 403
 
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
     @patch('app.Services.produto_service.ProdutoRepository.update')
-    def test_put_produto_as_admin_success(self, mock_update, client, admin_headers):
+    def test_put_produto_as_admin_success(self, mock_update, mock_find_codigo, client, admin_headers):
         """Validates that admin can update products returning 200."""
-        res = client.put('/api/produtos/1', headers=admin_headers, json={'nome': 'Espetinho Especial', 'preco': 8.50})
+        mock_find_codigo.return_value = None
+        res = client.put('/api/produtos/1', headers=admin_headers, json={'nome': 'Espetinho Especial', 'preco': 8.50, 'codigoBarras': '10'})
         assert res.status_code == 200
         data = res.get_json()
         assert data['success'] is True
+
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
+    @patch('app.Services.produto_service.ProdutoRepository.create')
+    def test_post_produto_duplicate_barcode(self, mock_create, mock_find_codigo, client, admin_headers):
+        """Validates that a duplicated barcode returns an explicit 400."""
+        mock_find_codigo.return_value = {'idProduto': 3}
+        res = client.post('/api/produtos', headers=admin_headers, json={'nome': 'Item', 'preco': 5.0, 'codigoBarras': '10'})
+        assert res.status_code == 400
+        assert "já está em uso" in res.get_json()['error']
+        mock_create.assert_not_called()
+
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
+    def test_get_gerar_codigo_barras(self, mock_find_codigo, client, admin_headers):
+        """Validates GET /api/produtos/gerar-codigo-barras returns the next free sequential code."""
+        mock_find_codigo.return_value = None
+        res = client.get('/api/produtos/gerar-codigo-barras', headers=admin_headers)
+        assert res.status_code == 200
+        assert res.get_json()['codigoBarras'] == '1'
 
     def test_delete_produto_as_vendedor_forbidden(self, client, vendedor_headers):
         """Validates that vendedor cannot delete products."""
