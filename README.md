@@ -18,7 +18,9 @@ SalesTrack/
 |   +-- database/           # Script do MySQL
 +-- FRONTEND/
 |   +-- frontend_react/     # React + Vite
++-- AGENTE_IMPRESSAO/       # Agente local de impressao (roda no Windows do caixa)
 +-- docker-compose.yml      # Containers
++-- iniciar_salestrack.bat  # Sobe os containers e o agente de impressao (Windows)
 +-- .env.example            # Exemplo de variaveis de ambiente
 +-- README.md
 ```
@@ -31,6 +33,7 @@ SalesTrack/
 | Backend | Python + Flask |
 | Banco de dados | MySQL |
 | Servidor | Docker + Docker Compose |
+| Impressão | Agente local em Python (pywin32 + pyserial) |
 
 ## 🚀 Como Executar com Docker
 
@@ -71,7 +74,12 @@ TECNICO_SECRET=gere_com_pyotp_random_base32
 
 ## 2. Subir o projeto
 
-Na raiz do projeto, execute:
+No Windows, dê dois cliques em `iniciar_salestrack.bat`, na raiz do projeto. Ele sobe os
+containers e o Agente de Impressão (seção 7) e pode ser executado quantas vezes for preciso.
+Na primeira vez a montagem das imagens leva alguns minutos; depois de atualizar o código, rode
+`iniciar_salestrack.bat --build`.
+
+Para subir só os containers, manualmente:
 
 ```powershell
 docker-compose up --build -d
@@ -182,6 +190,65 @@ Informando um período específico:
 ```powershell
 docker-compose exec backend python scripts/gerar_vendas.py --quantidade 50 --data-inicio 2026-05-01 --data-fim 2026-05-30
 ```
+
+---
+
+## 🖨️ 7. Impressão de comprovantes (Agente de Impressão)
+
+A impressora fica ligada ao computador do caixa, e nem o navegador nem os containers do Docker
+conseguem acessar as impressoras do Windows ou as portas COM. Quem faz essa ponte é o
+**Agente de Impressão**: um programa pequeno que roda direto no Windows de cada caixa
+(fora do Docker).
+
+O agente vem junto com o sistema: é um executável em `AGENTE_IMPRESSAO\dist\SalesTrackImpressao\`
+que o `iniciar_salestrack.bat` coloca no ar com os containers. O computador do caixa não precisa
+de Python nem de nenhuma outra instalação.
+
+### No computador do caixa
+
+1. Rode o `iniciar_salestrack.bat` (passo 2). Além de subir o sistema, ele registra o agente para
+   abrir sozinho junto com o Windows.
+2. Confira que o Docker Desktop também inicia com o Windows (**Settings → General → Start Docker
+   Desktop when you sign in**); assim os containers voltam sozinhos depois de reiniciar.
+
+O agente roda sem janela, em `http://127.0.0.1:9317`. Se a impressão falhar, o log fica em
+`%LOCALAPPDATA%\SalesTrack\agente_impressao.log`.
+
+Para tirar o agente do computador:
+
+```powershell
+taskkill /im SalesTrackImpressao.exe /f
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v SalesTrackImpressao /f
+```
+
+### Configurar a impressora
+
+Entre em **Configurações → Impressão** e escolha o tipo:
+
+| Tipo | Quando usar |
+|------|-------------|
+| Térmica instalada no Windows | Térmica (ESC/POS) que aparece em "Impressoras e scanners" — USB, rede ou serial com driver |
+| Térmica em porta serial (COM) | Térmica ligada direto numa porta COM do Gerenciador de Dispositivos, sem driver de impressora |
+| Impressora comum / A4 | Jato de tinta, laser ou "Microsoft Print to PDF" — o comprovante sai pelo driver do Windows |
+
+Selecione a impressora (ou a porta COM), clique em **Imprimir Página de Teste** e ajuste a
+largura do papel e a acentuação até o teste sair correto. Depois clique em **Salvar Configuração**.
+
+A configuração vale para aquele computador e navegador: cada caixa configura a própria impressora.
+
+### Para quem desenvolve
+
+- **Gerar o executável:** rode `AGENTE_IMPRESSAO\construir_agente.bat` (precisa de
+  [Python 3](https://www.python.org/downloads/)), e de novo sempre que o código do agente mudar.
+  A pasta `dist\` não é versionada pelo Git: ao instalar em um cliente, ela precisa ir junto com a
+  pasta do projeto.
+- **Rodar pelo código, com o log no console:** `AGENTE_IMPRESSAO\iniciar_agente.bat`. Só um agente
+  roda por vez, então encerre antes o executável (`taskkill /im SalesTrackImpressao.exe /f`).
+- **Sem impressora:** defina `SALESTRACK_AGENTE_SIMULACAO` com o caminho de um arquivo antes de
+  iniciar o agente; as impressões são gravadas nele em vez de irem para o dispositivo.
+- **Acesso por domínio:** o agente só responde ao próprio computador e a páginas abertas em
+  `localhost` ou em IPs de rede local. Outros endereços entram pela variável de ambiente
+  `SALESTRACK_AGENTE_ORIGENS` (ex.: `https://vendas.minhaloja.com.br`).
 
 # ⚙️Execução Manual sem Docker
 
