@@ -1,4 +1,8 @@
-from app.Repositories.venda_repository import VendaRepository, EstoqueInsuficienteError
+from app.Repositories.venda_repository import (
+    VendaRepository, EstoqueInsuficienteError,
+    ClienteNaoConveniadoError, LimiteConvenioExcedidoError, ConvenioPagamentoExistenteError,
+)
+from app.Repositories.cliente_repository import ClienteRepository
 from app.Repositories.auth_repository import AuthRepository
 from app.Constants.geral import Geral
 
@@ -8,8 +12,8 @@ TOLERANCIA_CENTAVOS = 0.01
 class VendaService:
 
     @staticmethod
-    def list():
-        vendas = VendaRepository.get_all()
+    def list(limit=100, offset=0):
+        vendas = VendaRepository.get_all(limit, offset)
         for v in vendas:
             v['valorTotal'] = float(v['valorTotal'])
             v['desconto']   = float(v['desconto'])
@@ -70,7 +74,7 @@ class VendaService:
         try:
             venda_id = VendaRepository.create(dados, usuario_id)
             return {'status': 201, 'message': Geral.VENDA_CADASTRADA, 'id': venda_id}
-        except EstoqueInsuficienteError as e:
+        except (EstoqueInsuficienteError, ClienteNaoConveniadoError, LimiteConvenioExcedidoError) as e:
             return {'status': 400, 'error': str(e)}
         except Exception:
             return {'status': 500, 'error': Geral.ERRO_CRIAR_VENDA}
@@ -82,6 +86,12 @@ class VendaService:
         da venda. Só pagamento em dinheiro pode exceder o total (vira troco).
         """
         pagamentos = dados.get('pagamentos') or []
+
+        # As formas são cadastráveis em Configurações; a coluna é VARCHAR(50)
+        formas = [dados.get('formaPagamento')] + [p.get('forma') for p in pagamentos]
+        if any(not isinstance(f, str) or not f.strip() or len(f) > 50 for f in formas):
+            return 'Forma de pagamento inválida.'
+
         if not pagamentos:
             # Sem array de pagamentos: o repository usa a forma única como fallback,
             # não há soma a conferir.
@@ -103,6 +113,28 @@ class VendaService:
 
         if total_pago > valor_final + TOLERANCIA_CENTAVOS and not tem_dinheiro:
             return 'Pagamento excede o valor da venda. Somente dinheiro permite troco.'
+
+        # Pré-checagem rápida de limite de convênio (não autoritativa — só
+        # para devolver um erro cedo, antes de abrir a transação). A checagem
+        # que realmente vale, com lock de linha contra corrida entre vendas
+        # simultâneas do mesmo cliente, está em VendaRepository.create().
+        por_cliente = {}
+        for p in pagamentos:
+            id_cliente = p.get('idClienteConvenio')
+            if id_cliente:
+                por_cliente[id_cliente] = por_cliente.get(id_cliente, 0) + float(p.get('valor') or 0)
+
+        for id_cliente, valor_total in por_cliente.items():
+            saldo = ClienteRepository.get_saldo_convenio(id_cliente)
+            if not saldo or not saldo['convenio']:
+                return f'Cliente id {id_cliente} não está habilitado para convênio.'
+            if saldo['limiteConvenio'] is None:
+                return 'Cliente não possui limite de convênio configurado.'
+            if saldo['saldoDevedor'] + valor_total > saldo['limiteConvenio'] + TOLERANCIA_CENTAVOS:
+                return (
+                    f"Limite de convênio excedido. Saldo devedor: R$ {saldo['saldoDevedor']:.2f}, "
+                    f"limite: R$ {saldo['limiteConvenio']:.2f}, tentativa: R$ {valor_total:.2f}."
+                )
 
         return None
 
@@ -127,5 +159,7 @@ class VendaService:
             if result == 'already_cancelled':
                 return {'status': 400, 'error': Geral.VENDA_JA_CANCELADA}
             return {'status': 200, 'message': Geral.VENDA_CANCELADA}
+        except ConvenioPagamentoExistenteError:
+            return {'status': 409, 'error': Geral.VENDA_CANCEL_BLOQUEADA_CONVENIO_PAGO}
         except Exception:
             return {'status': 500, 'error': Geral.ERRO_SERVIDOR}

@@ -27,6 +27,15 @@ class Geral:
     CLIENTE_REMOVIDO        = "Cliente removido com sucesso."
     CLIENTE_NAO_ENCONTRADO  = "Cliente não encontrado."
 
+    # Convênio
+    CONVENIO_LIMITE_NAO_CONFIGURADO        = "Cliente não possui limite de convênio configurado."
+    CONVENIO_CLIENTE_NAO_HABILITADO        = "Cliente não está habilitado para convênio."
+    CONVENIO_LANCAMENTO_INVALIDO           = "Um ou mais lançamentos não pertencem a este cliente ou já foram pagos."
+    CONVENIO_PAGAMENTO_REGISTRADO          = "Pagamento de convênio registrado com sucesso."
+    CLIENTE_CONVENIO_DESABILITAR_BLOQUEADO = "Não é possível desabilitar o convênio: cliente possui saldo devedor pendente."
+    CLIENTE_REMOCAO_BLOQUEADA_SALDO        = "Não é possível remover: cliente possui saldo devedor de convênio pendente."
+    VENDA_CANCEL_BLOQUEADA_CONVENIO_PAGO   = "Não é possível cancelar: pagamento de convênio já foi registrado para esta venda."
+
     # Venda
     VENDA_CADASTRADA        = "Venda registrada com sucesso."
     VENDA_NAO_ENCONTRADA    = "Venda não encontrada."

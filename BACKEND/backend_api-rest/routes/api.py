@@ -3,7 +3,7 @@ from app.Http.Controllers.controllers import (
     AuthController, ProdutoController, ClienteController,
     VendaController, CategoriaController, DashboardController,
     UserController, RelatorioController, ConfiguracaoController,
-    LicencaController,
+    LicencaController, ConvenioController,
 )
 from middlewares.auth_middleware import token_required
 
@@ -23,6 +23,7 @@ produto_bp.route('/api/produtos',          methods=['POST']  )(token_required(Pr
 produto_bp.route('/api/produtos/<int:id>', methods=['PUT']   )(token_required(ProdutoController.update))
 produto_bp.route('/api/produtos/<int:id>', methods=['PATCH'] )(token_required(ProdutoController.reactivate))
 produto_bp.route('/api/produtos/<int:id>', methods=['DELETE'])(token_required(ProdutoController.destroy))
+produto_bp.route('/api/produtos/gerar-codigo-barras', methods=['GET'])(token_required(ProdutoController.gerar_codigo_barras))
 
 # =============================================
 # Clientes
@@ -33,6 +34,13 @@ cliente_bp.route('/api/clientes',          methods=['POST']  )(token_required(Cl
 cliente_bp.route('/api/clientes/<int:id>', methods=['PUT']   )(token_required(ClienteController.update))
 cliente_bp.route('/api/clientes/<int:id>', methods=['PATCH'] )(token_required(ClienteController.reactivate))
 cliente_bp.route('/api/clientes/<int:id>', methods=['DELETE'])(token_required(ClienteController.destroy))
+
+# =============================================
+# Convênio
+# =============================================
+convenio_bp = Blueprint('convenio', __name__)
+convenio_bp.route('/api/clientes/<int:id>/convenio',           methods=['GET'] )(token_required(ConvenioController.show))
+convenio_bp.route('/api/clientes/<int:id>/convenio/pagamento', methods=['POST'])(token_required(ConvenioController.pagar))
 
 # =============================================
 # Vendas
@@ -48,6 +56,8 @@ venda_bp.route('/api/vendas/<int:id>/cancelar',   methods=['PATCH'])(token_requi
 # =============================================
 categoria_bp = Blueprint('categorias', __name__)
 categoria_bp.route('/api/categorias', methods=['GET'])(token_required(CategoriaController.index))
+categoria_bp.route('/api/categorias', methods=['POST'])(token_required(CategoriaController.store))
+categoria_bp.route('/api/categorias/<int:id>', methods=['DELETE'])(token_required(CategoriaController.destroy))
 
 # =============================================
 # Dashboard
@@ -64,6 +74,7 @@ usuario_bp = Blueprint('usuarios', __name__)
 usuario_bp.route('/api/usuarios',               methods=['GET'] )(token_required(UserController.index))
 usuario_bp.route('/api/usuarios',               methods=['POST'])(token_required(UserController.store))
 usuario_bp.route('/api/usuarios/<int:user_id>', methods=['PUT']  )(token_required(UserController.update))
+usuario_bp.route('/api/usuarios/<int:user_id>', methods=['PATCH'])(token_required(UserController.reactivate))
 usuario_bp.route('/api/usuarios/<int:user_id>', methods=['DELETE'])(token_required(UserController.delete))
 
 # =============================================

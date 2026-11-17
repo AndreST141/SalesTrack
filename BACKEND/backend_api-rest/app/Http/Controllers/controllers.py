@@ -2,6 +2,7 @@ from flask import request, jsonify
 from app.Services.auth_service import AuthService
 from app.Services.produto_service import ProdutoService
 from app.Services.cliente_service import ClienteService
+from app.Services.convenio_service import ConvenioService
 from app.Services.venda_service import VendaService
 from app.Services.user_service import UserService
 from app.Services.categoria_service import CategoriaService, DashboardService
@@ -70,6 +71,15 @@ class ProdutoController:
         result = ProdutoService.reactivate(id)
         return jsonify({'success': True}), result['status']
 
+    @staticmethod
+    def gerar_codigo_barras():
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = ProdutoService.gerar_codigo_barras()
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'codigoBarras': result['codigoBarras']}), 200
+
 
 # =============================================
 # ClienteController
@@ -103,7 +113,34 @@ class ClienteController:
     @staticmethod
     def destroy(id):
         result = ClienteService.delete(id)
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True}), result['status']
+
+
+# =============================================
+# ConvenioController
+# =============================================
+class ConvenioController:
+    # Quem pode registrar pagamento (quitar saldo devedor) de convênio —
+    # mesmo grupo que já autoriza cancelamento de venda em VendaService.
+    PERFIS_PAGAMENTO = {'admin', 'supervisor', 'tecnico'}
+
+    @staticmethod
+    def show(id):
+        result = ConvenioService.show(id)
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify(result['convenio']), result['status']
+
+    @staticmethod
+    def pagar(id):
+        if request.user.get('tipo') not in ConvenioController.PERFIS_PAGAMENTO:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = ConvenioService.pagar(id, request.json or {}, request.user['id'])
+        if result['status'] not in (200, 201):
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'success': True, 'message': result['message'], 'recibo': result['recibo']}), result['status']
 
 
 # =============================================
@@ -112,7 +149,11 @@ class ClienteController:
 class VendaController:
     @staticmethod
     def index():
-        result = VendaService.list()
+        # Limit tem um teto pra evitar abuso (ex: ?limit=999999999) sobrecarregando
+        # o banco numa única consulta.
+        limit = min(int(request.args.get('limit', 100)), 500)
+        offset = max(int(request.args.get('offset', 0)), 0)
+        result = VendaService.list(limit, offset)
         return jsonify(result['vendas']), result['status']
 
     @staticmethod
@@ -152,6 +193,24 @@ class CategoriaController:
         result = CategoriaService.list()
         return jsonify(result['categorias']), result['status']
 
+    @staticmethod
+    def store():
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = CategoriaService.create(request.json or {})
+        if result['status'] not in (200, 201):
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'success': True, 'id': result.get('id'), 'nome': result.get('nome')}), result['status']
+
+    @staticmethod
+    def destroy(id):
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = CategoriaService.delete(id)
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'success': True}), result['status']
+
 
 # =============================================
 # DashboardController
@@ -178,7 +237,8 @@ class DashboardController:
     @staticmethod
     def produtos_mais_vendidos():
         limite = int(request.args.get('limite', '10'))
-        result = DashboardService.get_produtos_mais_vendidos(limite)
+        periodo = int(request.args.get('periodo', '30'))
+        result = DashboardService.get_produtos_mais_vendidos(limite, periodo)
         return jsonify(result['produtos']), 200
 
 
@@ -216,7 +276,18 @@ class UserController:
     def delete(user_id):
         if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
             return jsonify({'error': 'Acesso não autorizado.'}), 403
-        result = UserService.delete(user_id)
+        result = UserService.delete(user_id, request.user.get('id'))
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
+        return jsonify({'success': True}), result['status']
+
+    @staticmethod
+    def reactivate(user_id):
+        if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
+            return jsonify({'error': 'Acesso não autorizado.'}), 403
+        result = UserService.reactivate(user_id)
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify({'success': True}), result['status']
 
 
@@ -234,6 +305,8 @@ class ConfiguracaoController:
         if request.user.get('tipo') not in Geral.PERFIS_ADMIN:
             return jsonify({'error': 'Acesso não autorizado.'}), 403
         result = ConfiguracaoService.atualizar(request.json or {})
+        if result['status'] != 200:
+            return jsonify({'error': result.get('error')}), result['status']
         return jsonify(result['configuracoes']), result['status']
 
 
