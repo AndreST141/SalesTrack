@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Sidebar from '../../components/SideBar/sidebar';
 import Modal from '../../components/Modal/Modal';
+import ModalUsuarios from '../../components/ModalUsuarios/ModalUsuarios';
 import { useConfig } from '../../contexts/ConfigContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -57,6 +58,25 @@ const BAUD_RATES = [9600, 19200, 38400, 57600, 115200];
 
 // ─── Component ─────────────────────────────────────────────────────
 
+function normalizarEmpresa(dados, padrao) {
+    const defaultData = padrao || {
+        cadastro: { razaoSocial: '', nomeFantasia: '', cnpj: '', inscricaoEstadual: '' },
+        endereco: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '', pais: 'Brasil' },
+    };
+    if (!dados || typeof dados !== 'object') return defaultData;
+    return {
+        ...dados,
+        cadastro: {
+            ...defaultData.cadastro,
+            ...(dados.cadastro || {}),
+        },
+        endereco: {
+            ...defaultData.endereco,
+            ...(dados.endereco || {}),
+        },
+    };
+}
+
 function Configuracoes() {
     const dataAtual = formatarDataAtual();
     const {
@@ -75,7 +95,7 @@ function Configuracoes() {
     const [importando, setImportando] = useState(false);
 
     // ── Empresa form state (local draft) ───────────────────────
-    const [empresa, setEmpresa] = useState(dadosEmpresa);
+    const [empresa, setEmpresa] = useState(() => normalizarEmpresa(dadosEmpresa, DADOS_EMPRESA_DEFAULT));
     const [erros, setErros] = useState({});
     const [cepLoading, setCepLoading] = useState(false);
     const [salvandoEstoqueNegativo, setSalvandoEstoqueNegativo] = useState(false);
@@ -114,29 +134,8 @@ function Configuracoes() {
     const [imprimindoTeste, setImprimindoTeste] = useState(false);
 
     // Sync from context when it changes (e.g. after import)
-    useEffect(() => { setEmpresa(dadosEmpresa); }, [dadosEmpresa]);
+    useEffect(() => { setEmpresa(normalizarEmpresa(dadosEmpresa, DADOS_EMPRESA_DEFAULT)); }, [dadosEmpresa, DADOS_EMPRESA_DEFAULT]);
     useEffect(() => { setImpressora(configImpressora); }, [configImpressora]);
-
-    // ── Cadastro field change ──────────────────────────────────
-    const handleCadastro = (field, value) => {
-        const val = field === 'cnpj' ? mascaraCNPJ(value) : value;
-        setEmpresa(prev => ({
-            ...prev,
-            cadastro: { ...prev.cadastro, [field]: val },
-        }));
-        if (erros[field]) setErros(prev => ({ ...prev, [field]: null }));
-    };
-
-    // ── Endereco field change ──────────────────────────────────
-    const handleEndereco = (field, value) => {
-        const val = field === 'cep' ? mascaraCEP(value) : value;
-        setEmpresa(prev => ({
-            ...prev,
-            endereco: { ...prev.endereco, [field]: val },
-        }));
-        if (field === 'cep') debounceCep(val);
-        if (erros[field]) setErros(prev => ({ ...prev, [field]: null }));
-    };
 
     // ── CEP lookup with debounce + AbortController ─────────────
     const debounceCep = useCallback((cepValue) => {
@@ -165,17 +164,20 @@ function Configuracoes() {
                     showNotification('CEP não encontrado. Verifique o número.', 'warning');
                     return;
                 }
-                setEmpresa(prev => ({
-                    ...prev,
-                    endereco: {
-                        ...prev.endereco,
-                        logradouro: data.logradouro || '',
-                        bairro: data.bairro || '',
-                        cidade: data.localidade || '',
-                        estado: data.uf || '',
-                        pais: 'Brasil',
-                    },
-                }));
+                setEmpresa(prev => {
+                    const atual = normalizarEmpresa(prev, DADOS_EMPRESA_DEFAULT);
+                    return {
+                        ...atual,
+                        endereco: {
+                            ...atual.endereco,
+                            logradouro: data.logradouro || '',
+                            bairro: data.bairro || '',
+                            cidade: data.localidade || '',
+                            estado: data.uf || '',
+                            pais: 'Brasil',
+                        },
+                    };
+                });
             } catch (err) {
                 if (err.name !== 'AbortError') {
                     showNotification('Não foi possível consultar o CEP. Verifique sua conexão.', 'error');
@@ -184,14 +186,41 @@ function Configuracoes() {
                 setCepLoading(false);
             }
         }, 800);
-    }, [showNotification]);
+    }, [showNotification, DADOS_EMPRESA_DEFAULT]);
+
+    // ── Cadastro field change ──────────────────────────────────
+    const handleCadastro = (field, value) => {
+        const val = field === 'cnpj' ? mascaraCNPJ(value) : value;
+        setEmpresa(prev => {
+            const atual = normalizarEmpresa(prev, DADOS_EMPRESA_DEFAULT);
+            return {
+                ...atual,
+                cadastro: { ...atual.cadastro, [field]: val },
+            };
+        });
+        if (erros[field]) setErros(prev => ({ ...prev, [field]: null }));
+    };
+
+    // ── Endereco field change ──────────────────────────────────
+    const handleEndereco = (field, value) => {
+        const val = field === 'cep' ? mascaraCEP(value) : value;
+        setEmpresa(prev => {
+            const atual = normalizarEmpresa(prev, DADOS_EMPRESA_DEFAULT);
+            return {
+                ...atual,
+                endereco: { ...atual.endereco, [field]: val },
+            };
+        });
+        if (field === 'cep') debounceCep(val);
+        if (erros[field]) setErros(prev => ({ ...prev, [field]: null }));
+    };
 
     // ── Validação + Salvar ──────────────────────────────────────
     const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
 
     const salvarEmpresa = async () => {
         const e = {};
-        const c = empresa.cadastro;
+        const c = empresa?.cadastro || {};
         if (!c.razaoSocial || c.razaoSocial.trim().length < 3) e.razaoSocial = 'Mínimo 3 caracteres';
         if (!c.nomeFantasia || c.nomeFantasia.trim().length < 2) e.nomeFantasia = 'Mínimo 2 caracteres';
         if (!c.cnpj || !validarCNPJ(c.cnpj)) e.cnpj = 'CNPJ inválido';
@@ -322,14 +351,14 @@ function Configuracoes() {
 
     const handleImpressora = (campo, valor) => setImpressora(prev => ({ ...prev, [campo]: valor }));
 
-    const usaSpooler = impressora.tipo !== 'termica_serial';
-    const impressoraTermica = impressora.tipo !== 'comum_windows';
+    const usaSpooler = impressora?.tipo !== 'termica_serial';
+    const impressoraTermica = impressora?.tipo !== 'comum_windows';
     const impressoraAlterada = JSON.stringify(impressora) !== JSON.stringify(configImpressora);
     // Dispositivo salvo que não está mais na máquina (desinstalado/desconectado)
-    const impressoraAusente = !!impressora.impressora
-        && !dispositivos.impressoras.some(i => i.nome === impressora.impressora);
-    const portaAusente = !!impressora.portaSerial
-        && !dispositivos.portasSeriais.some(p => p.porta === impressora.portaSerial);
+    const impressoraAusente = !!impressora?.impressora
+        && !(dispositivos?.impressoras || []).some(i => i.nome === impressora.impressora);
+    const portaAusente = !!impressora?.portaSerial
+        && !(dispositivos?.portasSeriais || []).some(p => p.porta === impressora.portaSerial);
 
     function validarImpressora() {
         if (usaSpooler && !impressora.impressora) {
@@ -476,21 +505,26 @@ function Configuracoes() {
         setLoadingUsuarios(true);
         try {
             const res = await api.get('/usuarios');
-            setUsuarios(res.data);
-        } catch {
-            showNotification('Erro ao carregar usuários.', 'error');
+            const lista = Array.isArray(res.data) ? res.data : [];
+            setUsuarios(lista);
+            return true;
+        } catch (err) {
+            const msg = err?.response?.data?.error ?? 'Erro ao carregar usuários.';
+            showNotification(msg, 'error');
+            return false;
         } finally {
             setLoadingUsuarios(false);
         }
     }
 
-    function abrirModalUsuarios() {
+    async function abrirModalUsuarios() {
         setViewCriar(false);
         setViewEditar(false);
         setNovoUsuario({ nome: '', email: '', senha: '', tipo: 'vendedor' });
         setErrosCriar({});
-        setModalUsuarios(true);
-        carregarUsuarios();
+        const ok = await carregarUsuarios();
+        if (ok) setModalUsuarios(true);
+        else setModalUsuarios(false);
     }
 
     function abrirEditar(usuario) {
@@ -588,12 +622,15 @@ function Configuracoes() {
     }
 
     // ── Computed: status do formulário de empresa ──────────────
-    const cnpjValido = empresa.cadastro.cnpj && validarCNPJ(empresa.cadastro.cnpj);
-    const empresaCompleto =
-        empresa.cadastro.razaoSocial?.trim().length >= 3 &&
-        empresa.cadastro.nomeFantasia?.trim().length >= 2 &&
-        !!cnpjValido &&
-        !!empresa.cadastro.inscricaoEstadual?.trim();
+    const cadastro = empresa?.cadastro || {};
+    const endereco = empresa?.endereco || {};
+    const cnpjValido = Boolean(cadastro.cnpj && validarCNPJ(cadastro.cnpj));
+    const empresaCompleto = Boolean(
+        cadastro.razaoSocial?.trim().length >= 3 &&
+        cadastro.nomeFantasia?.trim().length >= 2 &&
+        cnpjValido &&
+        cadastro.inscricaoEstadual?.trim()
+    );
 
     // ── Render ──────────────────────────────────────────────────
     return (
@@ -636,18 +673,18 @@ function Configuracoes() {
                                 <div className="config-field">
                                     <label>Razão Social <span className="required">*</span></label>
                                     <input type="text" placeholder="Razão Social da Empresa"
-                                        value={empresa.cadastro.razaoSocial}
+                                        value={cadastro.razaoSocial || ''}
                                         onChange={e => handleCadastro('razaoSocial', e.target.value)}
-                                        className={erros.razaoSocial ? 'input-error' : (empresa.cadastro.razaoSocial?.trim().length >= 3 ? 'input-valid' : '')}
+                                        className={erros.razaoSocial ? 'input-error' : (cadastro.razaoSocial?.trim().length >= 3 ? 'input-valid' : '')}
                                     />
                                     {erros.razaoSocial && <span className="field-error">{erros.razaoSocial}</span>}
                                 </div>
                                 <div className="config-field">
                                     <label>Nome Fantasia <span className="required">*</span></label>
                                     <input type="text" placeholder="Nome Fantasia"
-                                        value={empresa.cadastro.nomeFantasia}
+                                        value={cadastro.nomeFantasia || ''}
                                         onChange={e => handleCadastro('nomeFantasia', e.target.value)}
-                                        className={erros.nomeFantasia ? 'input-error' : (empresa.cadastro.nomeFantasia?.trim().length >= 2 ? 'input-valid' : '')}
+                                        className={erros.nomeFantasia ? 'input-error' : (cadastro.nomeFantasia?.trim().length >= 2 ? 'input-valid' : '')}
                                     />
                                     {erros.nomeFantasia && <span className="field-error">{erros.nomeFantasia}</span>}
                                 </div>
@@ -656,7 +693,7 @@ function Configuracoes() {
                                 <div className="config-field">
                                     <label>CNPJ <span className="required">*</span></label>
                                     <input type="text" placeholder="00.000.000/0000-00"
-                                        value={empresa.cadastro.cnpj}
+                                        value={cadastro.cnpj || ''}
                                         onChange={e => handleCadastro('cnpj', e.target.value)}
                                         className={erros.cnpj ? 'input-error' : (cnpjValido ? 'input-valid' : '')}
                                     />
@@ -668,9 +705,9 @@ function Configuracoes() {
                                 <div className="config-field">
                                     <label>Inscrição Estadual <span className="required">*</span></label>
                                     <input type="text" placeholder="000.000.000.000"
-                                        value={empresa.cadastro.inscricaoEstadual}
+                                        value={cadastro.inscricaoEstadual || ''}
                                         onChange={e => handleCadastro('inscricaoEstadual', e.target.value)}
-                                        className={erros.inscricaoEstadual ? 'input-error' : (empresa.cadastro.inscricaoEstadual?.trim() ? 'input-valid' : '')}
+                                        className={erros.inscricaoEstadual ? 'input-error' : (cadastro.inscricaoEstadual?.trim() ? 'input-valid' : '')}
                                     />
                                     {erros.inscricaoEstadual && <span className="field-error">{erros.inscricaoEstadual}</span>}
                                 </div>
@@ -687,7 +724,7 @@ function Configuracoes() {
                                     <label>CEP</label>
                                     <div className="cep-input-group">
                                         <input id="input-cep" type="text" placeholder="00000-000"
-                                            value={empresa.endereco.cep}
+                                            value={endereco.cep || ''}
                                             onChange={e => handleEndereco('cep', e.target.value)}
                                         />
                                         {cepLoading && <span className="cep-spinner" />}
@@ -696,14 +733,14 @@ function Configuracoes() {
                                 <div className="config-field">
                                     <label>Número</label>
                                     <input type="text" placeholder="Nº"
-                                        value={empresa.endereco.numero}
+                                        value={endereco.numero || ''}
                                         onChange={e => handleEndereco('numero', e.target.value)}
                                     />
                                 </div>
                                 <div className="config-field">
                                     <label>Complemento</label>
                                     <input type="text" placeholder="Sala, Bloco..."
-                                        value={empresa.endereco.complemento}
+                                        value={endereco.complemento || ''}
                                         onChange={e => handleEndereco('complemento', e.target.value)}
                                     />
                                 </div>
@@ -711,7 +748,7 @@ function Configuracoes() {
                             <div className="config-field">
                                 <label>Logradouro</label>
                                 <input type="text" placeholder="Rua, Avenida..."
-                                    value={empresa.endereco.logradouro}
+                                    value={endereco.logradouro || ''}
                                     onChange={e => handleEndereco('logradouro', e.target.value)}
                                 />
                             </div>
@@ -719,21 +756,21 @@ function Configuracoes() {
                                 <div className="config-field">
                                     <label>Bairro</label>
                                     <input type="text" placeholder="Bairro"
-                                        value={empresa.endereco.bairro}
+                                        value={endereco.bairro || ''}
                                         onChange={e => handleEndereco('bairro', e.target.value)}
                                     />
                                 </div>
                                 <div className="config-field">
                                     <label>Cidade</label>
                                     <input type="text" placeholder="Cidade"
-                                        value={empresa.endereco.cidade}
+                                        value={endereco.cidade || ''}
                                         onChange={e => handleEndereco('cidade', e.target.value)}
                                     />
                                 </div>
                                 <div className="config-field">
                                     <label>Estado</label>
                                     <input type="text" placeholder="UF" maxLength={2}
-                                        value={empresa.endereco.estado}
+                                        value={endereco.estado || ''}
                                         onChange={e => handleEndereco('estado', e.target.value.toUpperCase())}
                                     />
                                 </div>
@@ -741,7 +778,7 @@ function Configuracoes() {
                             <div className="config-row">
                                 <div className="config-field">
                                     <label>País</label>
-                                    <input type="text" value={empresa.endereco.pais} readOnly />
+                                    <input type="text" value={endereco.pais || 'Brasil'} readOnly />
                                 </div>
                             </div>
 
@@ -780,6 +817,14 @@ function Configuracoes() {
                                     </svg>
                                     Gerenciar Usuários
                                 </button>
+
+                                {/* ==== Modal de Usuários ==== */}
+                                <ModalUsuarios
+                                    isOpen={modalUsuarios}
+                                    onClose={() => setModalUsuarios(false)}
+                                    usuarios={usuarios}
+                                    loading={loadingUsuarios}
+                                />
                             </div>
                         </div>
                     </div>
@@ -812,7 +857,7 @@ function Configuracoes() {
                             </div>
 
                             <ul className="config-formas-list">
-                                {formasPagamento.map(f => (
+                                {(formasPagamento || []).map(f => (
                                     <li key={f.value} className="config-forma-item">
                                         <span className="config-forma-label">{f.label}</span>
                                         <span className="config-forma-shortcut">{f.shortcut}</span>
@@ -986,7 +1031,7 @@ function Configuracoes() {
                                                 {impressoraAusente && (
                                                     <option value={impressora.impressora}>{impressora.impressora} (não encontrada)</option>
                                                 )}
-                                                {dispositivos.impressoras.map(i => (
+                                                {(dispositivos?.impressoras || []).map(i => (
                                                     <option key={i.nome} value={i.nome}>
                                                         {i.nome}
                                                         {i.porta.length <= 20 ? ` (${i.porta})` : ''}
@@ -1006,7 +1051,7 @@ function Configuracoes() {
                                                     {portaAusente && (
                                                         <option value={impressora.portaSerial}>{impressora.portaSerial} (não encontrada)</option>
                                                     )}
-                                                    {dispositivos.portasSeriais.map(p => (
+                                                    {(dispositivos?.portasSeriais || []).map(p => (
                                                         <option key={p.porta} value={p.porta}>
                                                             {p.porta}{p.descricao ? `: ${p.descricao}` : ''}
                                                         </option>
@@ -1185,177 +1230,7 @@ function Configuracoes() {
                 </div>
             </div>
 
-            {/* ── Modal Gerenciar Usuários ──────────────────────── */}
-            <Modal
-                isOpen={modalUsuarios}
-                onClose={() => { setModalUsuarios(false); setViewCriar(false); setViewEditar(false); }}
-                title={viewCriar ? 'Cadastrar Novo Usuário' : viewEditar ? 'Editar Usuário' : 'Gerenciar Usuários'}
-                maxWidth="680px"
-                closeOnOverlayClick={false}
-                footer={
-                    viewCriar ? (
-                        <>
-                            <button className="btn-modal-cancel" onClick={() => { setViewCriar(false); setErrosCriar({}); }}>Voltar</button>
-                            <button className="btn-primary" onClick={criarUsuario} disabled={criando}>
-                                {criando ? 'Cadastrando...' : 'Cadastrar Usuário'}
-                            </button>
-                        </>
-                    ) : viewEditar ? (
-                        <>
-                            <button className="btn-modal-cancel" onClick={() => { setViewEditar(false); setUsuarioEditando(null); setErrosEditar({}); }}>Voltar</button>
-                            <button className="btn-primary" onClick={salvarEdicao} disabled={editando}>
-                                {editando ? 'Salvando...' : 'Salvar Alterações'}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <button className="btn-modal-cancel" onClick={() => setModalUsuarios(false)}>Fechar</button>
-                            <button className="btn-primary" onClick={() => { setViewCriar(true); setErrosCriar({}); setNovoUsuario({ nome: '', email: '', senha: '', tipo: 'vendedor' }); }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                </svg>
-                                Cadastrar Novo
-                            </button>
-                        </>
-                    )
-                }
-            >
-                {viewCriar ? (
-                    <div>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Nome <span className="required">*</span></label>
-                                <input type="text" placeholder="Nome completo" value={novoUsuario.nome}
-                                    onChange={e => handleNovoUsuarioChange('nome', e.target.value)}
-                                    className={errosCriar.nome ? 'input-error' : ''} />
-                                {errosCriar.nome && <span className="field-error">{errosCriar.nome}</span>}
-                            </div>
-                            <div className="form-group">
-                                <label>Perfil <span className="required">*</span></label>
-                                <select value={novoUsuario.tipo} onChange={e => handleNovoUsuarioChange('tipo', e.target.value)}
-                                    className={errosCriar.tipo ? 'input-error' : ''}>
-                                    <option value="vendedor">Vendedor</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="admin">Administrador</option>
-                                </select>
-                                {errosCriar.tipo && <span className="field-error">{errosCriar.tipo}</span>}
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label>E-mail <span className="required">*</span></label>
-                            <input type="email" placeholder="usuario@empresa.com" value={novoUsuario.email}
-                                onChange={e => handleNovoUsuarioChange('email', e.target.value)}
-                                className={errosCriar.email ? 'input-error' : ''} autoComplete="off" />
-                            {errosCriar.email && <span className="field-error">{errosCriar.email}</span>}
-                        </div>
-                        <div className="form-group">
-                            <label>Senha <span className="required">*</span></label>
-                            <input type="password" placeholder="Mínimo 4 caracteres" value={novoUsuario.senha}
-                                onChange={e => handleNovoUsuarioChange('senha', e.target.value)}
-                                className={errosCriar.senha ? 'input-error' : ''} autoComplete="new-password" />
-                            {errosCriar.senha && <span className="field-error">{errosCriar.senha}</span>}
-                        </div>
-                    </div>
-                ) : viewEditar && usuarioEditando ? (
-                    <div>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Nome <span className="required">*</span></label>
-                                <input type="text" placeholder="Nome completo" value={usuarioEditando.nome}
-                                    onChange={e => handleEditarChange('nome', e.target.value)}
-                                    className={errosEditar.nome ? 'input-error' : ''} />
-                                {errosEditar.nome && <span className="field-error">{errosEditar.nome}</span>}
-                            </div>
-                            <div className="form-group">
-                                <label>Perfil <span className="required">*</span></label>
-                                <select value={usuarioEditando.tipo} onChange={e => handleEditarChange('tipo', e.target.value)}
-                                    className={errosEditar.tipo ? 'input-error' : ''}>
-                                    <option value="vendedor">Vendedor</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="admin">Administrador</option>
-                                </select>
-                                {errosEditar.tipo && <span className="field-error">{errosEditar.tipo}</span>}
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label>E-mail</label>
-                            <input type="text" value={usuarioEditando.email} disabled
-                                style={{ background: '#f8fafc', color: '#94a3b8', cursor: 'not-allowed' }} />
-                        </div>
-                        <div className="form-group">
-                            <label>Nova Senha <span style={{ color: '#94a3b8', fontWeight: 400 }}>(deixe em branco para manter)</span></label>
-                            <input type="password" placeholder="Mínimo 4 caracteres" value={usuarioEditando.senha}
-                                onChange={e => handleEditarChange('senha', e.target.value)}
-                                className={errosEditar.senha ? 'input-error' : ''} autoComplete="new-password" />
-                            {errosEditar.senha && <span className="field-error">{errosEditar.senha}</span>}
-                        </div>
-                    </div>
-                ) : (
-                    loadingUsuarios ? (
-                        <p style={{ textAlign: 'center', color: '#94a3b8', padding: '24px 0' }}>Carregando usuários...</p>
-                    ) : usuarios.length === 0 ? (
-                        <p style={{ textAlign: 'center', color: '#94a3b8', padding: '24px 0' }}>Nenhum usuário cadastrado.</p>
-                    ) : (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>Nome</th>
-                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>E-mail</th>
-                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>Perfil</th>
-                                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#64748b', fontWeight: 600 }}>Status</th>
-                                        <th style={{ padding: '8px 12px' }}></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {usuarios.map(u => (
-                                        <tr key={u.idUsuario} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                            <td style={{ padding: '10px 12px', color: '#0f172a', fontWeight: 500 }}>{u.nome}</td>
-                                            <td style={{ padding: '10px 12px', color: '#64748b' }}>{u.email}</td>
-                                            <td style={{ padding: '10px 12px' }}>
-                                                <span className={`badge ${TIPO_BADGE[u.tipo] || 'badge-neutral'}`}>
-                                                    {TIPO_LABELS[u.tipo] || u.tipo}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '10px 12px' }}>
-                                                <span className={`badge ${u.ativo ? 'badge-success' : 'badge-danger'}`}>
-                                                    {u.ativo ? 'Ativo' : 'Inativo'}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                                                <button onClick={() => abrirEditar(u)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1570EF', padding: '4px 6px', borderRadius: '6px' }}>
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                                    </svg>
-                                                </button>
-                                                {!u.ativo ? (
-                                                    <button onClick={() => reativarUsuario(u)} title="Reativar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#16a34a', padding: '4px 6px', borderRadius: '6px' }}>
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                                                            <polyline points="1 4 1 10 7 10" />
-                                                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-                                                        </svg>
-                                                    </button>
-                                                ) : u.idUsuario !== usuarioLogado?.id && (
-                                                    <button onClick={() => setUsuarioParaExcluir(u)} title="Inativar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '4px 6px', borderRadius: '6px' }}>
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                                                            <polyline points="3 6 5 6 21 6" />
-                                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                                            <path d="M10 11v6M14 11v6" />
-                                                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                                        </svg>
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )
-                )}
-            </Modal>
+
 
             {/* ── Modal Confirmação Exclusão de Forma de Pagamento ─ */}
             <Modal
