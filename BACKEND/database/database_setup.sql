@@ -345,6 +345,11 @@ DROP PROCEDURE IF EXISTS sp_ampliar_valor_configuracao;
 
 INSERT IGNORE INTO Configuracao (chave, valor) VALUES ('permiteEstoqueNegativo', 'false');
 
+-- Seed: Dados padrão da empresa para permitir o primeiro acesso de usuários
+-- sem exigir bloqueio prematuro de licença/configuração.
+INSERT IGNORE INTO Configuracao (chave, valor) 
+VALUES ('dadosEmpresa', '{"cadastro":{"razaoSocial":"SalesTrack Comércio","nomeFantasia":"SalesTrack","cnpj":"12.345.678/0001-90"}}');
+
 -- Tabela de Licença do sistema (uma instalação = uma empresa/licença)
 CREATE TABLE IF NOT EXISTS Licenca (
     idLicenca INT AUTO_INCREMENT PRIMARY KEY,
