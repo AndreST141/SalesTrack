@@ -256,7 +256,7 @@ function Relatorios() {
 
     // Raw API data
     const [vendas, setVendas] = useState([]);
-    const [produtos, setProdutos] = useState([]);
+    const [produtos] = useState([]);
     const [clientes, setClientes] = useState([]);
     const [maisVendidos, setMaisVendidos] = useState([]);
     const [semMovimento, setSemMovimento] = useState([]);

@@ -358,6 +358,18 @@ CREATE TABLE IF NOT EXISTS Licenca (
     dataCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabela de Persistência de Tokens JWT Revogados (Blacklist)
+CREATE TABLE IF NOT EXISTS TokenRevogado (
+    idTokenRevogado INT AUTO_INCREMENT PRIMARY KEY,
+    tokenHash VARCHAR(64) NOT NULL UNIQUE,
+    idUsuario INT NULL,
+    dataRevogacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dataExpiracao DATETIME NOT NULL,
+    INDEX idx_token_hash (tokenHash),
+    INDEX idx_data_expiracao (dataExpiracao),
+    FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Seed: garante que toda instalação já nasce com uma licença ativa e sem
 -- vencimento, para não travar o primeiro acesso. Ajuste depois pela tela de
 -- Configurações ou diretamente no banco.
@@ -371,10 +383,10 @@ FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM Licenca LIMIT 1);
 -- Usa NOT EXISTS para tabelas sem constraint UNIQUE no nome
 -- =============================================
 
--- Usuários: email é UNIQUE, INSERT IGNORE evita duplicação
+-- Usuários: email é UNIQUE, INSERT IGNORE evita duplicação (senhas armazenadas com hash bcrypt)
 INSERT IGNORE INTO Usuario (nome, email, senha, tipo) VALUES 
-('Administrador', 'admin@salestrack.com', 'admin123', 'admin'),
-('Vendedor Teste', 'vendedor@salestrack.com', 'vendedor123', 'vendedor');
+('Administrador', 'admin@salestrack.com', '$2b$12$5L7He2BNo4.Nhf8o3JGCtOChkaks1MedMRQCYduVXoJSdE2WV9o4K', 'admin'),
+('Vendedor Teste', 'vendedor@salestrack.com', '$2b$12$0pqgEE9kVmWlQuUkTfU13OT0gj7e7GKMuJKYJ5HBqc4zk2V2Hgo4W', 'vendedor');
 
 -- Categorias: nome é UNIQUE, INSERT IGNORE evita duplicação
 -- 'Geral' é a única categoria fixa do sistema; as demais abaixo já existiam

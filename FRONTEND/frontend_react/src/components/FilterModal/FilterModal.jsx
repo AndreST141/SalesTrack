@@ -6,11 +6,13 @@ import './style.css';
 function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onApply }) {
     const [localFilters, setLocalFilters] = useState({});
 
+    // Sync draft filters whenever the modal opens or its active filters change.
     useEffect(() => {
         if (isOpen) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLocalFilters({ ...activeFilters });
         }
-    }, [isOpen]);
+    }, [isOpen, activeFilters]);
 
     function handleChange(key, value) {
         setLocalFilters((prev) => ({ ...prev, [key]: value }));

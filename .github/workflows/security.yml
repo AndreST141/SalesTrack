@@ -1,0 +1,46 @@
+name: SalesTrack Security Scan
+
+on:
+  schedule:
+    # Toda segunda-feira às 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Auditoria de Dependências
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      # Auditoria Node.js
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências frontend
+        working-directory: FRONTEND/frontend_react
+        run: npm ci
+
+      - name: Auditoria npm
+        working-directory: FRONTEND/frontend_react
+        run: npm audit --audit-level=high
+
+      # Auditoria Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar pip-audit
+        run: pip install pip-audit
+
+      - name: Auditoria pip
+        working-directory: BACKEND/backend_api-rest
+        run: pip-audit -r requirements.txt

@@ -7,7 +7,7 @@ role permission matrices (vendedor vs admin vs tecnico), and UTF-8 response inte
 import pytest
 from unittest.mock import patch
 from app.Constants.geral import Geral
-from middlewares.auth_middleware import active_tokens
+from middlewares.auth_middleware import _revoked_tokens
 
 class TestSecurityAndRbacIntegration:
 

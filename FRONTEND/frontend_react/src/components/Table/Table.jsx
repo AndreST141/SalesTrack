@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect } from 'react';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import './style.css';
 
 function normalizeStr(str) {
@@ -180,7 +178,9 @@ function Table({
   const fim = inicio + itemsPerPage;
   const dadosPaginados = dadosFiltrados.slice(inicio, fim);
 
+  // Reset pagination when the visible result set changes.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPaginaAtual(1);
   }, [termoBusca, activeFilters, sortConfig]);
 
@@ -204,32 +204,6 @@ function Table({
   const proximaPagina = () => setPaginaAtual((prev) => Math.min(prev + 1, totalPaginas));
 
   const totalColunas = columns.length + (actions ? 1 : 0);
-  const ghostsNeeded = Math.max(0, itemsPerPage - dadosPaginados.length);
-
-  const exportToExcel = () => {
-    if (dadosFiltrados.length === 0) return;
-    
-    const exportData = dadosFiltrados.map((item) => {
-      const row = {};
-      columns.forEach((col) => {
-        let value = item[col.key];
-        if (typeof value === 'object' && value !== null) {
-          value = JSON.stringify(value);
-        }
-        row[col.label] = value ?? '';
-      });
-      return row;
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Dados");
-    
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const dataObject = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(dataObject, 'exportacao.xlsx');
-  };
-
   return (
     <div className="body-table">
       {/* Search + Actions bar */}

@@ -61,7 +61,6 @@ function Vendas() {
     const inputConvenioRef = useRef(null);
     const { showNotification } = useNotification();
 
-    const formaAtiva = formasPagamento[pagamentoIndex] || formasPagamento[0];
     const isConvenio = formasPagamento.find(f => f.value === pagamentoForma)?.especial === 'convenio';
 
     // Inicializar forma padrão quando formasPagamento carrega
@@ -627,8 +626,6 @@ function Vendas() {
         const item = formasPagamento.find((p) => p.value === forma);
         return item ? item.label : forma;
     };
-
-    const fkShortcutList = formasPagamento.map((f, i) => `F${i + 1} ${f.label}`).join(' · ');
 
     return (
         <div className="body-vendas">

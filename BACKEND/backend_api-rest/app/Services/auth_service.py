@@ -1,17 +1,16 @@
 import time
-import secrets
 from datetime import datetime
 from app.Repositories.auth_repository import AuthRepository
 from app.Services.licenca_service import LicencaService
 from app.Constants.geral import Geral
-from middlewares.auth_middleware import active_tokens
+from middlewares.auth_middleware import generate_token, revoke_token
 
-# Bloqueio simples por e-mail contra força bruta (login normal e código TECNICO)
+# Bloqueio simples por e-mail contra força bruta
 MAX_TENTATIVAS      = 5
-JANELA_TENTATIVAS_S = 15 * 60   # 15 minutos para acumular tentativas
-BLOQUEIO_S          = 15 * 60   # tempo bloqueado após estourar o limite
+JANELA_TENTATIVAS_S = 15 * 60
+BLOQUEIO_S          = 15 * 60
 
-_tentativas_login = {}  # email -> {'falhas': int, 'primeira_falha': ts, 'bloqueado_ate': ts|None}
+_tentativas_login = {}
 
 
 class AuthService:
@@ -70,22 +69,23 @@ class AuthService:
         if user.get('tipo') == 'tecnico':
             print(f"[AUDITORIA] Login TECNICO em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
-        token = secrets.token_urlsafe(32)
-        active_tokens[token] = {
+        user_data = {
             'id':    user['idUsuario'],
             'nome':  user['nome'],
             'email': user['email'],
-            'tipo':  user['tipo']
+            'tipo':  user['tipo'],
         }
+
+        token = generate_token(user_data)
 
         return {
             'status': 200,
             'token': token,
-            'user': active_tokens[token]
+            'user': user_data,
         }
 
     @staticmethod
     def logout(token):
-        if token in active_tokens:
-            del active_tokens[token]
+        if token:
+            revoke_token(token)
         return {'status': 200, 'message': Geral.LOGOUT_OK}
