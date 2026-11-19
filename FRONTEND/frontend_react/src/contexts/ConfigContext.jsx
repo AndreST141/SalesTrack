@@ -62,8 +62,22 @@ function carregarPermiteEstoqueNegativo() {
     return StorageService.get('permiteEstoqueNegativo', false);
 }
 
+function normalizarDadosEmpresa(dados) {
+    if (!dados || typeof dados !== 'object') return DADOS_EMPRESA_DEFAULT;
+    return {
+        cadastro: {
+            ...DADOS_EMPRESA_DEFAULT.cadastro,
+            ...(dados.cadastro || {}),
+        },
+        endereco: {
+            ...DADOS_EMPRESA_DEFAULT.endereco,
+            ...(dados.endereco || {}),
+        },
+    };
+}
+
 function carregarDadosEmpresa() {
-    return StorageService.get('dadosEmpresa', DADOS_EMPRESA_DEFAULT);
+    return normalizarDadosEmpresa(StorageService.get('dadosEmpresa', DADOS_EMPRESA_DEFAULT));
 }
 
 // Mantém só os campos conhecidos: descarta o formato antigo ({ formato }) e
@@ -135,8 +149,9 @@ export function ConfigProvider({ children }) {
                 StorageService.set('permiteEstoqueNegativo', res.data.permiteEstoqueNegativo);
             }
             if (res.data?.dadosEmpresa && typeof res.data.dadosEmpresa === 'object') {
-                setDadosEmpresaState(res.data.dadosEmpresa);
-                StorageService.set('dadosEmpresa', res.data.dadosEmpresa);
+                const normalizado = normalizarDadosEmpresa(res.data.dadosEmpresa);
+                setDadosEmpresaState(normalizado);
+                StorageService.set('dadosEmpresa', normalizado);
             }
             if (Array.isArray(res.data?.formasPagamento) && res.data.formasPagamento.length > 0) {
                 setFormasPagamento(res.data.formasPagamento);

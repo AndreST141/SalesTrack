@@ -11,7 +11,8 @@ from unittest.mock import patch, MagicMock
 from app.Services.auth_service import AuthService, _tentativas_login, MAX_TENTATIVAS
 from app.Repositories.auth_repository import senha_tecnico_valida
 from app.Constants.geral import Geral
-from middlewares.auth_middleware import active_tokens
+from middlewares.auth_middleware import _revoked_tokens, JWT_SECRET, JWT_ALGORITHM
+import jwt
 
 class TestAuthServiceUnit:
 
@@ -75,9 +76,9 @@ class TestAuthServiceUnit:
         assert res['status'] == 200
         assert 'token' in res
         token = res['token']
-        assert token in active_tokens
-        assert active_tokens[token]['id'] == 10
-        assert active_tokens[token]['tipo'] == 'admin'
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        assert payload['id'] == 10
+        assert payload['tipo'] == 'admin'
 
     @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
     @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
@@ -131,14 +132,14 @@ class TestAuthServiceUnit:
         mock_motivo.assert_not_called()
 
     def test_logout_active_token(self):
-        """Validates that logout removes the token from active_tokens dictionary."""
+        """Validates that logout revokes the token."""
         token = "token-ativo-para-logout"
-        active_tokens[token] = {'id': 1, 'nome': 'Teste', 'email': 't@s.com', 'tipo': 'admin'}
+        _revoked_tokens.discard(token)
 
         res = AuthService.logout(token)
         assert res['status'] == 200
         assert res['message'] == Geral.LOGOUT_OK
-        assert token not in active_tokens
+        assert token in _revoked_tokens
 
     def test_logout_nonexistent_token(self):
         """Validates that logout with an already expired or nonexistent token completes without error."""

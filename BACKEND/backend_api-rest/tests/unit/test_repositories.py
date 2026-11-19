@@ -50,7 +50,7 @@ class TestRepositoriesUnit:
 
     @patch('app.Repositories.auth_repository.get_db_connection')
     def test_auth_repo_find_by_credentials_plaintext_fallback(self, mock_get_conn):
-        """Validates AuthRepository verification with legacy plaintext password."""
+        """Validates that plaintext passwords are REJECTED for security (no plaintext fallback)."""
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_get_conn.return_value = mock_conn
@@ -66,8 +66,8 @@ class TestRepositoriesUnit:
         }
 
         user = AuthRepository.find_by_credentials('legado@salestrack.com', 'plaintextpassword')
-        assert user is not None
-        assert user['idUsuario'] == 2
+        # Security requirement: Plaintext password must be rejected (returns None)
+        assert user is None
 
     @patch('app.Repositories.auth_repository.get_db_connection')
     def test_auth_repo_verify_admin_password(self, mock_get_conn):
@@ -89,8 +89,8 @@ class TestRepositoriesUnit:
         assert found_admin['nome'] == 'Admin Master'
 
         found_sup = AuthRepository.verify_admin_or_supervisor_password('supervisor_plain')
-        assert found_sup is not None
-        assert found_sup['nome'] == 'Supervisor'
+        # Plaintext password must be rejected
+        assert found_sup is None
 
         not_found = AuthRepository.verify_admin_or_supervisor_password('senha_totalmente_errada')
         assert not_found is None

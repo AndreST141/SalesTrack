@@ -22,7 +22,7 @@ backend_app_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(backend_app_module)
 flask_app = backend_app_module.app
 
-from middlewares.auth_middleware import active_tokens
+from middlewares.auth_middleware import generate_token, _revoked_tokens
 from app.Services import auth_service
 
 @pytest.fixture
@@ -43,61 +43,53 @@ def client(app):
 def clean_system_state():
     """
     Ensure every test runs in complete isolation by clearing in-memory
-    active tokens and rate-limiting brute force registries.
+    revoked tokens and rate-limiting brute force registries.
     """
-    active_tokens.clear()
+    _revoked_tokens.clear()
     auth_service._tentativas_login.clear()
     yield
-    active_tokens.clear()
+    _revoked_tokens.clear()
     auth_service._tentativas_login.clear()
 
 @pytest.fixture
 def admin_token():
-    """Register and return an admin user token."""
-    token = "test-token-admin-12345"
-    active_tokens[token] = {
+    """Generate and return an admin user JWT token."""
+    return generate_token({
         'id': 1,
         'nome': 'Administrador QA',
         'email': 'admin@salestrack.com',
         'tipo': 'admin'
-    }
-    return token
+    })
 
 @pytest.fixture
 def vendedor_token():
-    """Register and return a vendedor user token."""
-    token = "test-token-vendedor-12345"
-    active_tokens[token] = {
+    """Generate and return a vendedor user JWT token."""
+    return generate_token({
         'id': 2,
         'nome': 'Vendedor QA',
         'email': 'vendedor@salestrack.com',
         'tipo': 'vendedor'
-    }
-    return token
+    })
 
 @pytest.fixture
 def supervisor_token():
-    """Register and return a supervisor user token."""
-    token = "test-token-supervisor-12345"
-    active_tokens[token] = {
+    """Generate and return a supervisor user JWT token."""
+    return generate_token({
         'id': 3,
         'nome': 'Supervisor QA',
         'email': 'supervisor@salestrack.com',
         'tipo': 'supervisor'
-    }
-    return token
+    })
 
 @pytest.fixture
 def tecnico_token():
-    """Register and return a tecnico user token."""
-    token = "test-token-tecnico-12345"
-    active_tokens[token] = {
+    """Generate and return a tecnico user JWT token."""
+    return generate_token({
         'id': 4,
         'nome': 'Tecnico QA',
         'email': 'tecnico@salestrack.com',
         'tipo': 'tecnico'
-    }
-    return token
+    })
 
 @pytest.fixture
 def admin_headers(admin_token):

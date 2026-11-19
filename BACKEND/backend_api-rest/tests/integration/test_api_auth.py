@@ -6,7 +6,8 @@ and session invalidation.
 """
 import pytest
 from unittest.mock import patch
-from middlewares.auth_middleware import active_tokens
+import jwt
+from middlewares.auth_middleware import _revoked_tokens, JWT_SECRET, JWT_ALGORITHM
 from app.Constants.geral import Geral
 
 class TestAuthApiIntegration:
@@ -55,7 +56,9 @@ class TestAuthApiIntegration:
         data = res.get_json()
         assert 'token' in data
         assert data['user']['email'] == 'admin@salestrack.com'
-        assert data['token'] in active_tokens
+        payload = jwt.decode(data['token'], JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        assert payload['email'] == 'admin@salestrack.com'
+        assert data['token'] not in _revoked_tokens
 
     def test_post_logout_unauthenticated(self, client):
         """Validates that POST /api/logout without Authorization header returns 401."""
@@ -73,9 +76,9 @@ class TestAuthApiIntegration:
 
     def test_post_logout_success(self, client, admin_headers, admin_token):
         """Validates that POST /api/logout revokes session and returns 200."""
-        assert admin_token in active_tokens
+        assert admin_token not in _revoked_tokens
         res = client.post('/api/logout', headers=admin_headers)
         assert res.status_code == 200
         data = res.get_json()
         assert data['message'] == Geral.LOGOUT_OK
-        assert admin_token not in active_tokens
+        assert admin_token in _revoked_tokens

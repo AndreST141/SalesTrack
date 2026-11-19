@@ -177,7 +177,7 @@ function Dashboard() {
     return weeks;
   })();
 
-  const renderCustomPieLabel = ({ name, percent }) => {
+  const renderCustomPieLabel = ({ percent }) => {
     if (percent < 0.05) return null;
     return `${(percent * 100).toFixed(0)}%`;
   };

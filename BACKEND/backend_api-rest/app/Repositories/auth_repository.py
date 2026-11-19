@@ -47,10 +47,7 @@ class AuthRepository:
         if user['senha'].startswith('$2b$'):
             if bcrypt.checkpw(senha.encode('utf-8'), user['senha'].encode('utf-8')):
                 return user
-        else:
-            # Fallback texto puro para registros antigos
-            if user['senha'] == senha:
-                return user
+        # Senha não está em formato bcrypt - acesso negado por segurança
 
         return None
 
@@ -78,9 +75,7 @@ class AuthRepository:
         if user['senha'].startswith('$2b$'):
             if bcrypt.checkpw(senha.encode('utf-8'), user['senha'].encode('utf-8')):
                 return user
-        else:
-            if user['senha'] == senha:
-                return user
+        # Senha não está em formato bcrypt - acesso negado por segurança
 
         return None
 
@@ -111,8 +106,6 @@ class AuthRepository:
                         return user
                 except Exception:
                     continue
-            else:
-                if user['senha'] == senha:
-                    return user
+            # Senha não está em formato bcrypt - acesso negado por segurança
 
         return None
