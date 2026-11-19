@@ -12,6 +12,62 @@ class CategoriaRepository:
         conn.close()
         return categorias
 
+    @staticmethod
+    def find_by_nome(nome):
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Categoria WHERE nome = %s", (nome,))
+        categoria = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return categoria
+
+    @staticmethod
+    def create(nome, descricao=''):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO Categoria (nome, descricao) VALUES (%s, %s)",
+            (nome, descricao or '')
+        )
+        conn.commit()
+        categoria_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        return categoria_id
+
+    @staticmethod
+    def find_by_id(id):
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Categoria WHERE idCategoria = %s", (id,))
+        categoria = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return categoria
+
+    @staticmethod
+    def contar_produtos_vinculados(id):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM Produto WHERE idCategoria = %s AND ativo = TRUE",
+            (id,)
+        )
+        total = cursor.fetchone()[0]
+        cursor.close()
+        conn.close()
+        return total
+
+    @staticmethod
+    def delete(id):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Categoria WHERE idCategoria = %s", (id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
 
 class DashboardRepository:
     """Responsável apenas pelas queries do Dashboard no banco."""
@@ -33,7 +89,7 @@ class DashboardRepository:
 
         cursor.execute("""
             SELECT COUNT(*) as produtosBaixoEstoque
-            FROM Produto WHERE estoque < 10 AND ativo = TRUE
+            FROM Produto WHERE estoque < estoqueMinimo AND ativo = TRUE
         """)
         estoque = cursor.fetchone()
         cursor.close()
@@ -57,7 +113,7 @@ class DashboardRepository:
         return vendas
 
     @staticmethod
-    def get_produtos_mais_vendidos(limite):
+    def get_produtos_mais_vendidos(limite, periodo):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
@@ -68,10 +124,11 @@ class DashboardRepository:
             LEFT JOIN Categoria c ON p.idCategoria = c.idCategoria
             JOIN Venda v ON iv.idVenda = v.idVenda
             WHERE v.status = 'concluida'
+              AND v.dataVenda >= DATE_SUB(NOW(), INTERVAL %s DAY)
             GROUP BY p.idProduto, p.nome, c.nome
             ORDER BY totalVendido DESC
             LIMIT %s
-        """, (limite,))
+        """, (periodo, limite))
         produtos = cursor.fetchall()
         cursor.close()
         conn.close()

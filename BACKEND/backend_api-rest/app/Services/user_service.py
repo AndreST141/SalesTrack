@@ -48,15 +48,33 @@ class UserService:
             return {'status': 400, 'error': 'Senha deve ter no mínimo 4 caracteres'}
 
         try:
+            if not UserRepository.existe_gerenciavel(user_id):
+                return {'status': 404, 'error': Geral.USUARIO_NAO_ENCONTRADO}
             UserRepository.update(user_id, nome, tipo, senha)
             return {'status': 200, 'message': 'Usuário atualizado com sucesso'}
         except Exception:
             return {'status': 500, 'error': Geral.ERRO_SERVIDOR}
 
     @staticmethod
-    def delete(user_id):
+    def delete(user_id, solicitante_id=None):
+        # Evita que o admin se tranque para fora do sistema inativando a si mesmo
+        if solicitante_id is not None and user_id == solicitante_id:
+            return {'status': 400, 'error': 'Você não pode inativar o seu próprio usuário.'}
+
         try:
+            if not UserRepository.existe_gerenciavel(user_id):
+                return {'status': 404, 'error': Geral.USUARIO_NAO_ENCONTRADO}
             UserRepository.delete(user_id)
             return {'status': 200, 'message': 'Usuário inativado com sucesso'}
+        except Exception:
+            return {'status': 500, 'error': Geral.ERRO_SERVIDOR}
+
+    @staticmethod
+    def reactivate(user_id):
+        try:
+            if not UserRepository.existe_gerenciavel(user_id):
+                return {'status': 404, 'error': Geral.USUARIO_NAO_ENCONTRADO}
+            UserRepository.reactivate(user_id)
+            return {'status': 200, 'message': 'Usuário reativado com sucesso'}
         except Exception:
             return {'status': 500, 'error': Geral.ERRO_SERVIDOR}

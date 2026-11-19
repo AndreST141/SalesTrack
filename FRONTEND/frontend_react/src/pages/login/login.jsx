@@ -39,15 +39,6 @@ function Login() {
     }
   }
 
-  const handleForgotPassword = () => {
-    showNotification(
-      'Funcionalidade de recuperação de senha em desenvolvimento.',
-      'info',
-      'top',
-      'center'
-    );
-  };
-
   const handleRequestAccess = () => {
     showNotification(
       'Entre em contato com o administrador para solicitar seu acesso.',
@@ -160,9 +151,6 @@ function Login() {
                     </svg>
                   )}
                 </button>
-              </div>
-              <div className="linha-esqueceu">
-                <span onClick={handleForgotPassword}>Esqueceu a senha?</span>
               </div>
             </div>
 

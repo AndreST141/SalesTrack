@@ -342,6 +342,117 @@
     gap: 10px;
 }
 
+/* ── Formas de Pagamento ──────────────────────────────────────────── */
+.config-formas-list {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.config-forma-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.config-forma-item:last-child {
+    border-bottom: none;
+}
+
+.config-forma-label {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0f172a;
+}
+
+.config-forma-shortcut {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.config-forma-convenio {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.config-forma-convenio:hover:not(:disabled) {
+    border-color: #1570EF;
+    color: #1570EF;
+}
+
+.config-forma-convenio.ativo {
+    background: #eff6ff;
+    border-color: #1570EF;
+    color: #1570EF;
+}
+
+.config-forma-convenio:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.config-forma-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #dc2626;
+    padding: 4px 6px;
+    border-radius: 6px;
+    display: inline-flex;
+}
+
+.config-forma-remove:hover:not(:disabled) {
+    background: #fef2f2;
+}
+
+.config-forma-remove:disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.config-forma-nova {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.config-forma-nova .config-field {
+    margin-bottom: 0;
+}
+
+.config-forma-nova-nome {
+    flex: 1;
+}
+
+/* alinha o botão com os campos, descontando a altura do label */
+.config-forma-nova .btn-primary {
+    margin-top: 22px;
+    flex-shrink: 0;
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* ── Info Box ──────────────────────────────────────────────────────── */
 .config-info-box {
     display: flex;
@@ -364,12 +475,6 @@
     font-size: 12px;
     color: #0369a1;
     line-height: 1.5;
-}
-
-/* ── Field button align (for print button beside select) ──────────── */
-.config-field--btn-align {
-    display: flex;
-    flex-direction: column;
 }
 
 /* ── Icon variant ─────────────────────────────────────────────────── */
@@ -496,13 +601,92 @@
     border-radius: 20px;
 }
 
-/* ── Print: hide everything except the test page ──────────────────── */
-@media print {
-    .body-configuracoes .content-configuracoes .title-page,
-    .body-configuracoes .content-configuracoes .configuracoes-body {
-        display: block !important;
-    }
-    .body-configuracoes > *:not(.content-configuracoes) {
-        display: none !important;
-    }
+/* ── Impressão ────────────────────────────────────────────────────── */
+.config-agente-procurando,
+.config-impressora-salva {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0 0 14px;
+}
+
+.config-agente-procurando {
+    margin-bottom: 0;
+}
+
+.config-impressora-salva strong {
+    color: #0f172a;
+}
+
+.config-agente-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.config-agente-conectado {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #16a34a;
+}
+
+.config-agente-conectado::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+}
+
+.config-info-box--alerta {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.config-info-box--alerta svg {
+    color: #d97706;
+}
+
+.config-info-box--alerta span {
+    color: #92400e;
+}
+
+.config-field-hint {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+/* toggle usado como campo de formulário, abaixo de outros campos */
+.config-toggle-row--campo {
+    margin-top: 16px;
+}
+
+.config-card-actions--entre {
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.config-card-actions-direita {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.config-nao-salvo {
+    font-size: 12px;
+    font-weight: 500;
+    color: #d97706;
+}
+
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }

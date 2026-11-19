@@ -96,6 +96,17 @@ function Table({
             return String(item[key]) === String(filterValue).trim();
           }
 
+          // Campos com máscara (CPF, telefone, CEP...): compara só os dígitos,
+          // pra achar o registro mesmo com a formatação digitada parcial
+          // (ex: "710" bate com "710.210.131-70") e sem depender de pontuação
+          // coincidir caractere a caractere.
+          if (filterDef?.digitsOnly) {
+            const itemDigits = String(item[key] ?? '').replace(/\D/g, '');
+            const filterDigits = String(filterValue).replace(/\D/g, '');
+            if (!filterDigits) return true;
+            return itemDigits.includes(filterDigits);
+          }
+
           // Pagamento com múltiplas formas: percorre item.pagamentos[] em vez de
           // usar item.formaPagamento (que pode conter só o primeiro ou estar vazio).
           // Suporta tanto p.formaPagamento quanto p.forma (variações de campo do backend).
@@ -118,11 +129,19 @@ function Table({
 
     if (termoBusca.trim() && searchKeys.length > 0) {
       const termoNorm = normalizeStr(termoBusca);
+      // Dígitos do termo buscado: permite achar CPF/telefone mesmo que o
+      // usuário digite sem pontuação (ex: "710210" acha "710.210.131-70").
+      // Exige pelo menos 3 dígitos pra não disparar com um dígito solto no
+      // meio de uma busca por texto comum (ex: "E2E", "F1", "modelo 2").
+      const termoDigitsRaw = termoBusca.replace(/\D/g, '');
+      const termoDigits = termoDigitsRaw.length >= 3 ? termoDigitsRaw : '';
       result = result.filter((item) =>
         searchKeys.some((key) => {
           const valor = item[key];
           if (valor == null) return false;
-          return normalizeStr(valor).includes(termoNorm);
+          if (normalizeStr(valor).includes(termoNorm)) return true;
+          if (termoDigits && String(valor).replace(/\D/g, '').includes(termoDigits)) return true;
+          return false;
         })
       );
     }

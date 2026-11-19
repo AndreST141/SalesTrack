@@ -3,9 +3,13 @@ import Sidebar from '../../components/SideBar/sidebar';
 import Modal from '../../components/Modal/Modal';
 import { useConfig } from '../../contexts/ConfigContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import StorageService from '../../services/storageService';
+import ImpressaoService from '../../services/impressaoService';
 import { formatarDataAtual } from '../../utils/data';
+import { montarPaginaTeste } from '../../utils/comprovante';
+import { MAX_FORMAS_PAGAMENTO, slugFormaPagamento } from '../../utils/pagamento';
 import './style.css';
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -44,6 +48,13 @@ function mascaraCEP(value) {
 const TIPO_LABELS = { admin: 'Administrador', supervisor: 'Supervisor', vendedor: 'Vendedor' };
 const TIPO_BADGE  = { admin: 'badge-info', supervisor: 'badge-warning', vendedor: 'badge-success' };
 
+// Integração com Pinpad ainda não implementada: o card fica fora da tela e
+// só o esqueleto é mantido no código. Trocar para true ao implementar.
+const EXIBIR_INTEGRACAO_PINPAD = false;
+
+// Velocidades aceitas pelo Agente de Impressão para impressora em porta COM
+const BAUD_RATES = [9600, 19200, 38400, 57600, 115200];
+
 // ─── Component ─────────────────────────────────────────────────────
 
 function Configuracoes() {
@@ -52,9 +63,16 @@ function Configuracoes() {
         permiteEstoqueNegativo, setPermiteEstoqueNegativo,
         dadosEmpresa, setDadosEmpresa,
         configImpressora, setConfigImpressora,
+        formasPagamento, salvarFormas, permiteExcluir,
+        FORMAS_PADRAO,
         DADOS_EMPRESA_DEFAULT,
     } = useConfig();
     const { showNotification } = useNotification();
+    const { user: usuarioLogado } = useAuth();
+
+    // ── Backup ─────────────────────────────────────────────────
+    const [backupPendente, setBackupPendente] = useState(null);
+    const [importando, setImportando] = useState(false);
 
     // ── Empresa form state (local draft) ───────────────────────
     const [empresa, setEmpresa] = useState(dadosEmpresa);
@@ -80,8 +98,24 @@ function Configuracoes() {
     const [editando, setEditando] = useState(false);
     const [usuarioParaExcluir, setUsuarioParaExcluir] = useState(null);
 
+    // ── Formas de Pagamento ────────────────────────────────────
+    const [novaForma, setNovaForma] = useState({ label: '' });
+    const [erroForma, setErroForma] = useState('');
+    const [salvandoForma, setSalvandoForma] = useState(false);
+    const [formaParaExcluir, setFormaParaExcluir] = useState(null);
+
+    // ── Impressão ──────────────────────────────────────────────
+    // 'verificando' | 'conectado' | 'indisponivel'
+    const [agenteStatus, setAgenteStatus] = useState('verificando');
+    const [agenteInfo, setAgenteInfo] = useState(null);
+    const [dispositivos, setDispositivos] = useState({ impressoras: [], portasSeriais: [] });
+    const [atualizandoDispositivos, setAtualizandoDispositivos] = useState(false);
+    const [impressora, setImpressora] = useState(configImpressora);   // rascunho local
+    const [imprimindoTeste, setImprimindoTeste] = useState(false);
+
     // Sync from context when it changes (e.g. after import)
     useEffect(() => { setEmpresa(dadosEmpresa); }, [dadosEmpresa]);
+    useEffect(() => { setImpressora(configImpressora); }, [configImpressora]);
 
     // ── Cadastro field change ──────────────────────────────────
     const handleCadastro = (field, value) => {
@@ -195,50 +229,246 @@ function Configuracoes() {
         }
     }
 
-    // ── Impressora ─────────────────────────────────────────────
-    const handleFormato = (value) => {
-        const novo = { ...configImpressora, formato: value };
-        setConfigImpressora(novo);
-    };
+    // ── Formas de Pagamento ────────────────────────────────────
+    const limiteFormasAtingido = formasPagamento.length >= MAX_FORMAS_PAGAMENTO;
 
-    const imprimirTeste = () => {
-        window.print();
-    };
+    async function adicionarForma() {
+        const label = novaForma.label.trim();
+        if (label.length < 2) { setErroForma('Informe o nome da forma de pagamento.'); return; }
+
+        // Reaproveita o identificador de uma forma padrão recadastrada com o
+        // mesmo nome, para ela continuar somando com as vendas já registradas.
+        const slug = slugFormaPagamento(label);
+        const padrao = FORMAS_PADRAO.find(f => slugFormaPagamento(f.label) === slug);
+        const value = padrao ? padrao.value : slug;
+
+        if (!value) { setErroForma('Use letras ou números no nome.'); return; }
+        if (formasPagamento.some(f => f.value === value || slugFormaPagamento(f.label) === slug)) {
+            setErroForma('Já existe uma forma de pagamento com esse nome.');
+            return;
+        }
+
+        setSalvandoForma(true);
+        try {
+            await salvarFormas([...formasPagamento, { value, label }]);
+            setNovaForma({ label: '' });
+            setErroForma('');
+            showNotification('Forma de pagamento cadastrada!', 'success');
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao salvar forma de pagamento.', 'error');
+        } finally {
+            setSalvandoForma(false);
+        }
+    }
+
+    // Só uma forma de pagamento pode ser a "especial" de convênio/controle
+    // interno por vez: marcar uma desmarca automaticamente as outras.
+    async function alternarEspecialConvenio(forma) {
+        const ativar = forma.especial !== 'convenio';
+        setSalvandoForma(true);
+        try {
+            await salvarFormas(formasPagamento.map(f => ({
+                ...f,
+                especial: f.value === forma.value && ativar ? 'convenio' : null,
+            })));
+            showNotification(
+                ativar ? `"${forma.label}" agora é a forma de Convênio.` : 'Vínculo de Convênio removido.',
+                'success'
+            );
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao atualizar forma de pagamento.', 'error');
+        } finally {
+            setSalvandoForma(false);
+        }
+    }
+
+    async function confirmarExclusaoForma() {
+        if (!formaParaExcluir) return;
+        setSalvandoForma(true);
+        try {
+            await salvarFormas(formasPagamento.filter(f => f.value !== formaParaExcluir.value));
+            showNotification('Forma de pagamento excluída!', 'success');
+            setFormaParaExcluir(null);
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao excluir forma de pagamento.', 'error');
+        } finally {
+            setSalvandoForma(false);
+        }
+    }
+
+    // ── Impressora ─────────────────────────────────────────────
+    // Pergunta ao agente local se ele está no ar e quais são as impressoras
+    // do Windows e as portas COM deste computador.
+    const carregarDispositivos = useCallback(async () => {
+        setAtualizandoDispositivos(true);
+        try {
+            setAgenteInfo(await ImpressaoService.status());
+            setAgenteStatus('conectado');
+        } catch {
+            setAgenteStatus('indisponivel');
+            setAtualizandoDispositivos(false);
+            return;
+        }
+        try {
+            setDispositivos(await ImpressaoService.listarDispositivos());
+        } catch (err) {
+            showNotification(err.message, 'error');
+        } finally {
+            setAtualizandoDispositivos(false);
+        }
+    }, [showNotification]);
+
+    useEffect(() => { carregarDispositivos(); }, [carregarDispositivos]);
+
+    const handleImpressora = (campo, valor) => setImpressora(prev => ({ ...prev, [campo]: valor }));
+
+    const usaSpooler = impressora.tipo !== 'termica_serial';
+    const impressoraTermica = impressora.tipo !== 'comum_windows';
+    const impressoraAlterada = JSON.stringify(impressora) !== JSON.stringify(configImpressora);
+    // Dispositivo salvo que não está mais na máquina (desinstalado/desconectado)
+    const impressoraAusente = !!impressora.impressora
+        && !dispositivos.impressoras.some(i => i.nome === impressora.impressora);
+    const portaAusente = !!impressora.portaSerial
+        && !dispositivos.portasSeriais.some(p => p.porta === impressora.portaSerial);
+
+    function validarImpressora() {
+        if (usaSpooler && !impressora.impressora) {
+            showNotification('Selecione a impressora.', 'warning');
+            return false;
+        }
+        if (!usaSpooler && !impressora.portaSerial) {
+            showNotification('Selecione a porta COM da impressora.', 'warning');
+            return false;
+        }
+        return true;
+    }
+
+    function salvarImpressora() {
+        if (!validarImpressora()) return;
+        setConfigImpressora(impressora);
+        showNotification('Configuração de impressão salva!', 'success');
+    }
+
+    // Usa o rascunho da tela, para dar para testar antes de salvar
+    async function imprimirTeste() {
+        if (!validarImpressora()) return;
+        setImprimindoTeste(true);
+        try {
+            const linhas = montarPaginaTeste({
+                empresa: dadosEmpresa,
+                config: impressora,
+                dispositivo: usaSpooler
+                    ? impressora.impressora
+                    : `${impressora.portaSerial} (${impressora.baudRate} bps)`,
+                operador: usuarioLogado?.nome,
+                formasPagamento,
+            });
+            await ImpressaoService.imprimir(impressora, linhas);
+            showNotification('Página de teste enviada para a impressora.', 'success');
+        } catch (err) {
+            if (err.agenteIndisponivel) setAgenteStatus('indisponivel');
+            showNotification(err.message, 'error');
+        } finally {
+            setImprimindoTeste(false);
+        }
+    }
 
     // ── Backup ─────────────────────────────────────────────────
     const exportarBackup = () => {
-        const backup = StorageService.exportAll();
-        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const date = new Date().toISOString().slice(0, 10);
-        a.href = url;
-        a.download = `salestrack-backup-${date}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showNotification('Backup exportado com sucesso!', 'success');
+        try {
+            // Exporta os valores em uso (contexto já sincronizado com o servidor),
+            // não só o que por acaso está gravado no localStorage.
+            const backup = StorageService.exportAll({
+                dadosEmpresa,
+                configImpressora,
+                formasPagamento,
+                permiteEstoqueNegativo,
+                permiteExcluir,
+            });
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `salestrack-backup-${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            // Revogar na hora pode cancelar o download em alguns navegadores
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showNotification('Backup exportado com sucesso!', 'success');
+        } catch (err) {
+            console.error('Erro ao exportar backup:', err);
+            showNotification('Não foi possível exportar o backup.', 'error');
+        }
     };
 
+    // Lê e valida o arquivo; a restauração só acontece após a confirmação
     const importarBackup = (e) => {
         const file = e.target.files?.[0];
+        e.target.value = '';
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
+            let parsed;
             try {
-                const parsed = JSON.parse(evt.target.result);
-                const result = StorageService.importAll(parsed);
-                if (!result.success) {
-                    showNotification(result.error, 'error');
-                    return;
-                }
-                showNotification('Backup restaurado! Recarregando...', 'success');
-                setTimeout(() => window.location.reload(), 1500);
+                parsed = JSON.parse(evt.target.result);
             } catch {
                 showNotification('Arquivo JSON inválido.', 'error');
+                return;
             }
+            const validacao = StorageService.validateBackup(parsed);
+            if (!validacao.success) {
+                showNotification(validacao.error, 'error');
+                return;
+            }
+            setBackupPendente({ nomeArquivo: file.name, backup: parsed });
         };
+        reader.onerror = () => showNotification('Não foi possível ler o arquivo.', 'error');
         reader.readAsText(file);
-        e.target.value = '';
+    };
+
+    const confirmarImportacao = async () => {
+        if (!backupPendente) return;
+        const data = { ...backupPendente.backup.data };
+
+        // Completa campos ausentes (backups antigos/editados) com os padrões
+        if (data.dadosEmpresa) {
+            data.dadosEmpresa = {
+                cadastro: { ...DADOS_EMPRESA_DEFAULT.cadastro, ...data.dadosEmpresa.cadastro },
+                endereco: { ...DADOS_EMPRESA_DEFAULT.endereco, ...data.dadosEmpresa.endereco },
+            };
+        }
+
+        // dadosEmpresa e permiteEstoqueNegativo vivem no backend: se fossem
+        // gravados só no localStorage, a sincronização com o servidor os
+        // sobrescreveria logo após o recarregamento.
+        const paraServidor = {};
+        if ('dadosEmpresa' in data) paraServidor.dadosEmpresa = data.dadosEmpresa;
+        if ('permiteEstoqueNegativo' in data) paraServidor.permiteEstoqueNegativo = data.permiteEstoqueNegativo;
+        if ('formasPagamento' in data) paraServidor.formasPagamento = data.formasPagamento;
+
+        setImportando(true);
+        try {
+            if (Object.keys(paraServidor).length > 0) {
+                await api.put('/configuracoes', paraServidor);
+            }
+        } catch (err) {
+            console.error('Erro ao restaurar backup no servidor:', err);
+            showNotification(err.response?.data?.error || 'Erro ao restaurar o backup no servidor. Nada foi alterado.', 'error');
+            setImportando(false);
+            return;
+        }
+
+        const result = StorageService.importAll({ ...backupPendente.backup, data });
+        setImportando(false);
+        setBackupPendente(null);
+        if (!result.success) {
+            showNotification(result.error, 'error');
+            return;
+        }
+        showNotification('Backup restaurado! Recarregando...', 'success');
+        setTimeout(() => window.location.reload(), 1500);
     };
 
     // ── Usuários ───────────────────────────────────────────────
@@ -308,8 +538,18 @@ function Configuracoes() {
             showNotification('Usuário inativado com sucesso!', 'success');
             setUsuarioParaExcluir(null);
             carregarUsuarios();
-        } catch {
-            showNotification('Erro ao inativar usuário.', 'error');
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao inativar usuário.', 'error');
+        }
+    }
+
+    async function reativarUsuario(usuario) {
+        try {
+            await api.patch(`/usuarios/${usuario.idUsuario}`);
+            showNotification('Usuário reativado com sucesso!', 'success');
+            carregarUsuarios();
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao reativar usuário.', 'error');
         }
     }
 
@@ -322,6 +562,7 @@ function Configuracoes() {
         const e = {};
         if (!novoUsuario.nome.trim())  e.nome  = 'Campo obrigatório';
         if (!novoUsuario.email.trim()) e.email = 'Campo obrigatório';
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novoUsuario.email.trim())) e.email = 'E-mail inválido';
         if (!novoUsuario.senha.trim() || novoUsuario.senha.length < 4) e.senha = 'Mínimo 4 caracteres';
         if (!novoUsuario.tipo)         e.tipo  = 'Selecione um perfil';
 
@@ -485,13 +726,15 @@ function Configuracoes() {
                                 <div className="config-field">
                                     <label>Cidade</label>
                                     <input type="text" placeholder="Cidade"
-                                        value={empresa.endereco.cidade} readOnly
+                                        value={empresa.endereco.cidade}
+                                        onChange={e => handleEndereco('cidade', e.target.value)}
                                     />
                                 </div>
                                 <div className="config-field">
                                     <label>Estado</label>
-                                    <input type="text" placeholder="UF"
-                                        value={empresa.endereco.estado} readOnly
+                                    <input type="text" placeholder="UF" maxLength={2}
+                                        value={empresa.endereco.estado}
+                                        onChange={e => handleEndereco('estado', e.target.value.toUpperCase())}
                                     />
                                 </div>
                             </div>
@@ -536,6 +779,82 @@ function Configuracoes() {
                                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                     </svg>
                                     Gerenciar Usuários
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Formas de Pagamento ─────────────────────── */}
+                    <div className="config-card">
+                        <div className="config-card-header">
+                            <div className="config-card-icon config-card-icon--green">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="1" y="4" width="22" height="16" rx="2" />
+                                    <line x1="1" y1="10" x2="23" y2="10" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2>Formas de Pagamento</h2>
+                                <p>Finalizadoras disponíveis no ponto de venda</p>
+                            </div>
+                        </div>
+                        <div className="config-card-body">
+                            <div className="config-info-box">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="16" x2="12" y2="12" />
+                                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                                </svg>
+                                <span>
+                                    As formas aparecem no PDV nesta ordem, com os atalhos F1 a F{MAX_FORMAS_PAGAMENTO}. Somente &quot;Dinheiro&quot; permite troco.
+                                    Excluir uma forma não altera as vendas já registradas com ela.
+                                </span>
+                            </div>
+
+                            <ul className="config-formas-list">
+                                {formasPagamento.map(f => (
+                                    <li key={f.value} className="config-forma-item">
+                                        <span className="config-forma-label">{f.label}</span>
+                                        <span className="config-forma-shortcut">{f.shortcut}</span>
+                                        <button
+                                            className={`config-forma-convenio ${f.especial === 'convenio' ? 'ativo' : ''}`}
+                                            onClick={() => alternarEspecialConvenio(f)}
+                                            disabled={salvandoForma}
+                                            title={f.especial === 'convenio' ? 'Remover vínculo de Convênio' : 'Vincular como Convênio / Controle Interno'}
+                                        >
+                                            {f.especial === 'convenio' ? 'Convênio' : 'Vincular Convênio'}
+                                        </button>
+                                        <button
+                                            className="config-forma-remove"
+                                            onClick={() => setFormaParaExcluir(f)}
+                                            disabled={formasPagamento.length <= 1 || salvandoForma}
+                                            title={formasPagamento.length <= 1 ? 'É preciso manter ao menos uma forma de pagamento' : 'Excluir'}
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                                                <polyline points="3 6 5 6 21 6" />
+                                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                <path d="M10 11v6M14 11v6" />
+                                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                            </svg>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <div className="config-forma-nova">
+                                <div className="config-field config-forma-nova-nome">
+                                    <label>Nova forma de pagamento</label>
+                                    <input type="text" maxLength={40} disabled={limiteFormasAtingido}
+                                        placeholder={limiteFormasAtingido ? `Limite de ${MAX_FORMAS_PAGAMENTO} formas atingido` : 'Ex: Vale Alimentação'}
+                                        value={novaForma.label}
+                                        onChange={e => { setNovaForma(prev => ({ ...prev, label: e.target.value })); setErroForma(''); }}
+                                        onKeyDown={e => { if (e.key === 'Enter') adicionarForma(); }}
+                                        className={erroForma ? 'input-error' : ''}
+                                    />
+                                    {erroForma && <span className="field-error">{erroForma}</span>}
+                                </div>
+                                <button className="btn-primary" onClick={adicionarForma} disabled={limiteFormasAtingido || salvandoForma}>
+                                    {salvandoForma ? 'Salvando...' : 'Adicionar'}
                                 </button>
                             </div>
                         </div>
@@ -594,43 +913,188 @@ function Configuracoes() {
                             </div>
                             <div>
                                 <h2>Impressão</h2>
-                                <p>Configurações de impressora e comprovante</p>
+                                <p>Impressora do comprovante de pagamento deste computador</p>
                             </div>
                         </div>
                         <div className="config-card-body">
-                            <div className="config-info-box">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="16" x2="12" y2="12" />
-                                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                                </svg>
-                                <span>A impressora será selecionada através do diálogo do Windows ao imprimir.</span>
-                            </div>
-                            <div className="config-row">
-                                <div className="config-field">
-                                    <label>Formato do Comprovante</label>
-                                    <select value={configImpressora.formato} onChange={e => handleFormato(e.target.value)}>
-                                        <option value="cupom_80mm">Cupom (80mm)</option>
-                                        <option value="a4">A4</option>
-                                    </select>
-                                </div>
-                                <div className="config-field config-field--btn-align">
-                                    <label>&nbsp;</label>
-                                    <button className="btn-secondary" onClick={imprimirTeste}>
+                            {agenteStatus === 'verificando' && (
+                                <p className="config-agente-procurando">Procurando o agente de impressão neste computador...</p>
+                            )}
+
+                            {agenteStatus === 'indisponivel' && (
+                                <>
+                                    <div className="config-info-box config-info-box--alerta">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-                                            <polyline points="6 9 6 2 18 2 18 9" />
-                                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                                            <rect x="6" y="14" width="12" height="8" />
+                                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                            <line x1="12" y1="9" x2="12" y2="13" />
+                                            <line x1="12" y1="17" x2="12.01" y2="17" />
                                         </svg>
-                                        Imprimir Página de Teste
-                                    </button>
-                                </div>
-                            </div>
+                                        <span>
+                                            O agente de impressão não está respondendo neste computador. É ele que dá acesso às impressoras
+                                            do Windows e às portas COM, e sobe junto com o sistema: execute o
+                                            arquivo <strong>iniciar_salestrack.bat</strong> (na pasta do SalesTrack) no computador onde a
+                                            impressora está ligada e clique em &quot;Tentar novamente&quot;.
+                                        </span>
+                                    </div>
+                                    {(configImpressora.impressora || configImpressora.portaSerial) && (
+                                        <p className="config-impressora-salva">
+                                            Impressora configurada:{' '}
+                                            <strong>
+                                                {configImpressora.tipo === 'termica_serial'
+                                                    ? configImpressora.portaSerial
+                                                    : configImpressora.impressora}
+                                            </strong>
+                                        </p>
+                                    )}
+                                    <div className="config-actions-row">
+                                        <button className="btn-secondary" onClick={carregarDispositivos} disabled={atualizandoDispositivos}>
+                                            {atualizandoDispositivos ? 'Procurando...' : 'Tentar novamente'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {agenteStatus === 'conectado' && (
+                                <>
+                                    <div className="config-agente-status">
+                                        <span className="config-agente-conectado">
+                                            Agente de impressão conectado
+                                            {agenteInfo?.versao ? ` (v${agenteInfo.versao})` : ''}
+                                            {agenteInfo?.simulacao ? ' (modo simulação, nada é enviado à impressora)' : ''}
+                                        </span>
+                                        <button className="btn-secondary" onClick={carregarDispositivos} disabled={atualizandoDispositivos}>
+                                            {atualizandoDispositivos ? 'Atualizando...' : 'Atualizar lista'}
+                                        </button>
+                                    </div>
+
+                                    <div className="config-field">
+                                        <label>Tipo de impressora</label>
+                                        <select id="select-tipo-impressora" value={impressora.tipo}
+                                            onChange={e => handleImpressora('tipo', e.target.value)}>
+                                            <option value="termica_spooler">Térmica instalada no Windows (USB, rede...)</option>
+                                            <option value="termica_serial">Térmica em porta serial (COM)</option>
+                                            <option value="comum_windows">Impressora comum / A4 (driver do Windows)</option>
+                                        </select>
+                                    </div>
+
+                                    {usaSpooler ? (
+                                        <div className="config-field">
+                                            <label>Impressora <span className="required">*</span></label>
+                                            <select id="select-impressora" value={impressora.impressora}
+                                                onChange={e => handleImpressora('impressora', e.target.value)}>
+                                                <option value="">Selecione a impressora</option>
+                                                {impressoraAusente && (
+                                                    <option value={impressora.impressora}>{impressora.impressora} (não encontrada)</option>
+                                                )}
+                                                {dispositivos.impressoras.map(i => (
+                                                    <option key={i.nome} value={i.nome}>
+                                                        {i.nome}
+                                                        {i.porta.length <= 20 ? ` (${i.porta})` : ''}
+                                                        {i.padrao ? ', padrão do Windows' : ''}
+                                                        {i.offline ? ', offline' : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ) : (
+                                        <div className="config-row">
+                                            <div className="config-field">
+                                                <label>Porta COM <span className="required">*</span></label>
+                                                <select id="select-porta-serial" value={impressora.portaSerial}
+                                                    onChange={e => handleImpressora('portaSerial', e.target.value)}>
+                                                    <option value="">Selecione a porta</option>
+                                                    {portaAusente && (
+                                                        <option value={impressora.portaSerial}>{impressora.portaSerial} (não encontrada)</option>
+                                                    )}
+                                                    {dispositivos.portasSeriais.map(p => (
+                                                        <option key={p.porta} value={p.porta}>
+                                                            {p.porta}{p.descricao ? `: ${p.descricao}` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="config-field">
+                                                <label>Velocidade (baud rate)</label>
+                                                <select value={impressora.baudRate}
+                                                    onChange={e => handleImpressora('baudRate', Number(e.target.value))}>
+                                                    {BAUD_RATES.map(b => <option key={b} value={b}>{b}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="config-row">
+                                        <div className="config-field">
+                                            <label>Largura do papel</label>
+                                            <select value={impressora.colunas}
+                                                onChange={e => handleImpressora('colunas', Number(e.target.value))}>
+                                                <option value={48}>80 mm (48 colunas)</option>
+                                                <option value={42}>80 mm (42 colunas)</option>
+                                                <option value={32}>58 mm (32 colunas)</option>
+                                            </select>
+                                        </div>
+                                        {impressoraTermica && (
+                                            <div className="config-field">
+                                                <label>Acentuação</label>
+                                                <select value={impressora.acentuacao}
+                                                    onChange={e => handleImpressora('acentuacao', e.target.value)}>
+                                                    <option value="sem_acentos">Sem acentos (padrão)</option>
+                                                    <option value="cp850">Com acentos (CP850)</option>
+                                                    <option value="cp860">Com acentos (CP860)</option>
+                                                </select>
+                                                <span className="config-field-hint">
+                                                    Se os acentos saírem trocados na página de teste, escolha outra opção.
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {impressoraTermica && (
+                                        <div className="config-toggle-row config-toggle-row--campo">
+                                            <div className="config-toggle-info">
+                                                <span className="config-toggle-label">Cortar o papel ao final</span>
+                                                <span className="config-toggle-desc">
+                                                    Aciona a guilhotina depois do comprovante. Desative se a impressora não tiver guilhotina.
+                                                </span>
+                                            </div>
+                                            <button
+                                                id="toggle-cortar-papel"
+                                                className={`config-toggle-btn ${impressora.cortarPapel ? 'active' : ''}`}
+                                                onClick={() => handleImpressora('cortarPapel', !impressora.cortarPapel)}
+                                                aria-pressed={impressora.cortarPapel}
+                                                title={impressora.cortarPapel ? 'Desativar' : 'Ativar'}
+                                            >
+                                                <span className="config-toggle-track">
+                                                    <span className="config-toggle-thumb" />
+                                                </span>
+                                                <span className="config-toggle-status">
+                                                    {impressora.cortarPapel ? 'Ativado' : 'Desativado'}
+                                                </span>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <div className="config-card-actions config-card-actions--entre">
+                                        <button className="btn-secondary" onClick={imprimirTeste} disabled={imprimindoTeste}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                                <polyline points="6 9 6 2 18 2 18 9" />
+                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                                                <rect x="6" y="14" width="12" height="8" />
+                                            </svg>
+                                            {imprimindoTeste ? 'Imprimindo...' : 'Imprimir Página de Teste'}
+                                        </button>
+                                        <div className="config-card-actions-direita">
+                                            {impressoraAlterada && <span className="config-nao-salvo">Alterações não salvas</span>}
+                                            <button className="btn-primary" onClick={salvarImpressora}>Salvar Configuração</button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
-                        <div className="config-card-badge">Em desenvolvimento</div>
                     </div>
 
-                    {/* ── 5. Integração Pinpad ────────────────────── */}
+                    {/* ── 5. Integração Pinpad (oculto — ver EXIBIR_INTEGRACAO_PINPAD) ── */}
+                    {EXIBIR_INTEGRACAO_PINPAD && (
                     <div className="config-card">
                         <div className="config-card-header">
                             <div className="config-card-icon">
@@ -664,6 +1128,7 @@ function Configuracoes() {
                         </div>
                         <div className="config-card-badge">Em desenvolvimento</div>
                     </div>
+                    )}
 
                     {/* ── 6. Backup ───────────────────────────────── */}
                     <div className="config-card">
@@ -687,7 +1152,7 @@ function Configuracoes() {
                                     <line x1="12" y1="16" x2="12" y2="12" />
                                     <line x1="12" y1="8" x2="12.01" y2="8" />
                                 </svg>
-                                <span>O backup inclui dados da empresa, formas de pagamento e configurações locais. Arquivo versionado em JSON.</span>
+                                <span>O backup inclui dados da empresa, formas de pagamento e demais configurações desta tela, em arquivo JSON versionado. Não inclui produtos, clientes, vendas nem usuários.</span>
                             </div>
                             <div className="config-actions-row">
                                 <button className="btn-secondary" onClick={exportarBackup}>
@@ -726,6 +1191,7 @@ function Configuracoes() {
                 onClose={() => { setModalUsuarios(false); setViewCriar(false); setViewEditar(false); }}
                 title={viewCriar ? 'Cadastrar Novo Usuário' : viewEditar ? 'Editar Usuário' : 'Gerenciar Usuários'}
                 maxWidth="680px"
+                closeOnOverlayClick={false}
                 footer={
                     viewCriar ? (
                         <>
@@ -864,14 +1330,23 @@ function Configuracoes() {
                                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                                     </svg>
                                                 </button>
-                                                <button onClick={() => setUsuarioParaExcluir(u)} title="Inativar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '4px 6px', borderRadius: '6px' }}>
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                                                        <polyline points="3 6 5 6 21 6" />
-                                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                                        <path d="M10 11v6M14 11v6" />
-                                                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                                    </svg>
-                                                </button>
+                                                {!u.ativo ? (
+                                                    <button onClick={() => reativarUsuario(u)} title="Reativar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#16a34a', padding: '4px 6px', borderRadius: '6px' }}>
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                                                            <polyline points="1 4 1 10 7 10" />
+                                                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                                        </svg>
+                                                    </button>
+                                                ) : u.idUsuario !== usuarioLogado?.id && (
+                                                    <button onClick={() => setUsuarioParaExcluir(u)} title="Inativar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '4px 6px', borderRadius: '6px' }}>
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                                                            <polyline points="3 6 5 6 21 6" />
+                                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                            <path d="M10 11v6M14 11v6" />
+                                                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                                        </svg>
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -880,6 +1355,51 @@ function Configuracoes() {
                         </div>
                     )
                 )}
+            </Modal>
+
+            {/* ── Modal Confirmação Exclusão de Forma de Pagamento ─ */}
+            <Modal
+                isOpen={!!formaParaExcluir}
+                onClose={() => { if (!salvandoForma) setFormaParaExcluir(null); }}
+                title="Excluir Forma de Pagamento"
+                maxWidth="420px"
+                footer={
+                    <>
+                        <button className="btn-modal-cancel" onClick={() => setFormaParaExcluir(null)} disabled={salvandoForma}>Cancelar</button>
+                        <button className="btn-modal-danger" onClick={confirmarExclusaoForma} disabled={salvandoForma}>
+                            {salvandoForma ? 'Excluindo...' : 'Confirmar Exclusão'}
+                        </button>
+                    </>
+                }
+            >
+                <p className="confirm-message">
+                    Deseja excluir a forma de pagamento <strong>{formaParaExcluir?.label}</strong>?<br />
+                    Ela deixará de aparecer no PDV. As vendas já registradas com ela são mantidas.
+                </p>
+            </Modal>
+
+            {/* ── Modal Confirmação Importação de Backup ────────── */}
+            <Modal
+                isOpen={!!backupPendente}
+                onClose={() => { if (!importando) setBackupPendente(null); }}
+                title="Restaurar Backup"
+                maxWidth="460px"
+                footer={
+                    <>
+                        <button className="btn-modal-cancel" onClick={() => setBackupPendente(null)} disabled={importando}>Cancelar</button>
+                        <button className="btn-modal-danger" onClick={confirmarImportacao} disabled={importando}>
+                            {importando ? 'Restaurando...' : 'Restaurar Backup'}
+                        </button>
+                    </>
+                }
+            >
+                <p className="confirm-message">
+                    Deseja restaurar o backup <strong>{backupPendente?.nomeArquivo}</strong>
+                    {backupPendente?.backup?.exportedAt && !Number.isNaN(Date.parse(backupPendente.backup.exportedAt)) && (
+                        <> (exportado em {new Date(backupPendente.backup.exportedAt).toLocaleString('pt-BR')})</>
+                    )}?<br />
+                    As configurações atuais serão substituídas pelas do arquivo, para todos os usuários do sistema.
+                </p>
             </Modal>
 
             {/* ── Modal Confirmação Exclusão ────────────────────── */}

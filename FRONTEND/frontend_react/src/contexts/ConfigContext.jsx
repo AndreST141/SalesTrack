@@ -3,12 +3,12 @@ import StorageService from '../services/storageService';
 import api from '../services/api';
 
 const FORMAS_PADRAO = [
-    { value: 'dinheiro',       label: 'Dinheiro',        icon: '💵', shortcut: 'F1' },
-    { value: 'cartao_credito', label: 'Cartão de Crédito', icon: '💳', shortcut: 'F2' },
-    { value: 'cartao_debito',  label: 'Cartão de Débito',  icon: '💳', shortcut: 'F3' },
-    { value: 'pix',            label: 'PIX',              icon: '📱', shortcut: 'F4' },
-    { value: 'outro',          label: 'Outro',            icon: '📋', shortcut: 'F5' },
-    // { value: 'convenio',       label: 'Convênio',         icon: '🤝', shortcut: 'F6' },
+    { value: 'dinheiro',       label: 'Dinheiro',          shortcut: 'F1' },
+    { value: 'cartao_credito', label: 'Cartão de Crédito', shortcut: 'F2' },
+    { value: 'cartao_debito',  label: 'Cartão de Débito',  shortcut: 'F3' },
+    { value: 'pix',            label: 'PIX',               shortcut: 'F4' },
+    { value: 'outro',          label: 'Outro',             shortcut: 'F5' },
+    // { value: 'convenio',       label: 'Convênio',          shortcut: 'F6' },
 ];
 
 // ─── Defaults ──────────────────────────────────────────────────────
@@ -32,8 +32,18 @@ const DADOS_EMPRESA_DEFAULT = {
     },
 };
 
+// A impressora é do computador do caixa, não da instalação: por isso esta
+// configuração fica só no navegador (não vai para o backend) e é enviada ao
+// Agente de Impressão local a cada impressão.
 const CONFIG_IMPRESSORA_DEFAULT = {
-    formato: 'cupom_80mm',
+    // 'termica_spooler' | 'termica_serial' | 'comum_windows'
+    tipo: 'termica_spooler',
+    impressora: '',        // nome da impressora no Windows (tipos via spooler)
+    portaSerial: '',       // ex.: 'COM3' (tipo termica_serial)
+    baudRate: 9600,
+    colunas: 48,           // 48/42 = bobina de 80 mm, 32 = bobina de 58 mm
+    acentuacao: 'sem_acentos',   // 'sem_acentos' | 'cp850' | 'cp860'
+    cortarPapel: true,
 };
 
 // ─── Loaders (via StorageService) ──────────────────────────────────
@@ -56,8 +66,16 @@ function carregarDadosEmpresa() {
     return StorageService.get('dadosEmpresa', DADOS_EMPRESA_DEFAULT);
 }
 
+// Mantém só os campos conhecidos: descarta o formato antigo ({ formato }) e
+// completa o que faltar num valor salvo por versão anterior ou vindo de backup.
 function carregarConfigImpressora() {
-    return StorageService.get('configImpressora', CONFIG_IMPRESSORA_DEFAULT);
+    const salvo = StorageService.get('configImpressora', null) || {};
+    return Object.fromEntries(
+        Object.entries(CONFIG_IMPRESSORA_DEFAULT).map(([chave, padrao]) => [
+            chave,
+            typeof salvo[chave] === typeof padrao ? salvo[chave] : padrao,
+        ])
+    );
 }
 
 // ─── Context ───────────────────────────────────────────────────────
@@ -71,12 +89,16 @@ export function ConfigProvider({ children }) {
     const [dadosEmpresa, setDadosEmpresaState] = useState(carregarDadosEmpresa);
     const [configImpressora, setConfigImpressoraState] = useState(carregarConfigImpressora);
 
-    const salvarFormas = useCallback((novasFormas) => {
+    // formasPagamento é configuração do sistema (vale para todos os caixas) —
+    // vive no backend, com o localStorage como cache. O contexto só muda depois
+    // do servidor confirmar.
+    const salvarFormas = useCallback(async (novasFormas) => {
         // Reatribuir atalhos F1, F2... na ordem
         const comAtalhos = novasFormas.map((f, i) => ({
             ...f,
             shortcut: `F${i + 1}`,
         }));
+        await api.put('/configuracoes', { formasPagamento: comAtalhos });
         setFormasPagamento(comAtalhos);
         StorageService.set('formasPagamento', comAtalhos);
     }, []);
@@ -90,11 +112,20 @@ export function ConfigProvider({ children }) {
     // todos os usuários/dispositivos) — vive no backend (tabela Configuracao).
     // O localStorage é usado só como cache para não haver "flash" de valor
     // padrão antes da resposta do servidor chegar.
+    // Se o servidor recusar, desfaz a mudança otimista — senão a tela mostraria
+    // um valor que não vale de fato (a venda é validada pelo backend).
     const setPermiteEstoqueNegativo = useCallback(async (valor) => {
+        const anterior = permiteEstoqueNegativo;
         setPermiteEstoqueNegativoState(valor);
         StorageService.set('permiteEstoqueNegativo', valor);
-        await api.put('/configuracoes', { permiteEstoqueNegativo: valor });
-    }, []);
+        try {
+            await api.put('/configuracoes', { permiteEstoqueNegativo: valor });
+        } catch (err) {
+            setPermiteEstoqueNegativoState(anterior);
+            StorageService.set('permiteEstoqueNegativo', anterior);
+            throw err;
+        }
+    }, [permiteEstoqueNegativo]);
 
     const sincronizarConfiguracoesDoServidor = useCallback(async () => {
         try {
@@ -106,6 +137,10 @@ export function ConfigProvider({ children }) {
             if (res.data?.dadosEmpresa && typeof res.data.dadosEmpresa === 'object') {
                 setDadosEmpresaState(res.data.dadosEmpresa);
                 StorageService.set('dadosEmpresa', res.data.dadosEmpresa);
+            }
+            if (Array.isArray(res.data?.formasPagamento) && res.data.formasPagamento.length > 0) {
+                setFormasPagamento(res.data.formasPagamento);
+                StorageService.set('formasPagamento', res.data.formasPagamento);
             }
         } catch (err) {
             console.error('Erro ao sincronizar configurações do servidor:', err);
@@ -122,12 +157,15 @@ export function ConfigProvider({ children }) {
     }, []);
 
     // dadosEmpresa também é uma configuração do sistema (não do navegador) —
-    // mesma lógica de permiteEstoqueNegativo: otimista localmente + persiste
-    // no backend, para valer para todos os usuários/dispositivos da instalação.
+    // persiste no backend, para valer para todos os usuários/dispositivos da
+    // instalação, com o localStorage como cache.
+    // Aqui o contexto só é atualizado depois do servidor confirmar: o rascunho
+    // fica no formulário da tela, então não há "flash" a evitar e uma falha
+    // não deixa dados não salvos valendo para o resto do app.
     const setDadosEmpresa = useCallback(async (dados) => {
+        await api.put('/configuracoes', { dadosEmpresa: dados });
         setDadosEmpresaState(dados);
         StorageService.set('dadosEmpresa', dados);
-        await api.put('/configuracoes', { dadosEmpresa: dados });
     }, []);
 
     const setConfigImpressora = useCallback((config) => {
@@ -135,10 +173,7 @@ export function ConfigProvider({ children }) {
         StorageService.set('configImpressora', config);
     }, []);
 
-    const resetFormas = useCallback(() => {
-        setFormasPagamento(FORMAS_PADRAO);
-        StorageService.remove('formasPagamento');
-    }, []);
+    const resetFormas = useCallback(() => salvarFormas(FORMAS_PADRAO), [salvarFormas]);
 
     return (
         <ConfigContext.Provider value={{

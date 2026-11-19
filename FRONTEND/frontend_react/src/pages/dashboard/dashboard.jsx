@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/SideBar/sidebar";
 import api from "../../services/api";
 import { useNotification } from "../../contexts/NotificationContext";
+import { useConfig } from "../../contexts/ConfigContext";
 import { formatarDataAtual } from "../../utils/data";
+import { labelFormaPagamento } from "../../utils/pagamento";
 import {
   AreaChart,
   Area,
@@ -86,6 +88,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   
   const { showNotification } = useNotification();
+  const { formasPagamento } = useConfig();
 
   const dataAtual = formatarDataAtual();
 
@@ -100,7 +103,7 @@ function Dashboard() {
         const [kpisRes, vendasRes, produtosRes, vendasListRes] = await Promise.all([
           api.get('/dashboard/kpis?periodo=30'),
           api.get('/dashboard/vendas-periodo?dias=30'),
-          api.get('/dashboard/produtos-mais-vendidos?limite=10'),
+          api.get('/dashboard/produtos-mais-vendidos?limite=10&periodo=30'),
           api.get('/vendas').catch(() => ({ data: [] })),
         ]);
 
@@ -142,7 +145,7 @@ function Dashboard() {
       });
     });
     return Object.entries(counts).map(([key, value]) => ({
-      name: PAYMENT_LABELS[key] || key,
+      name: labelFormaPagamento(key, formasPagamento, PAYMENT_LABELS),
       value,
     }));
   })();

@@ -33,9 +33,45 @@ CREATE TABLE IF NOT EXISTS Cliente (
     telefone VARCHAR(20),
     email VARCHAR(100),
     endereco TEXT,
+    observacoes TEXT,
+    convenio BOOLEAN DEFAULT FALSE,
+    limiteConvenio DECIMAL(10,2) DEFAULT NULL,
     dataCadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ativo BOOLEAN DEFAULT TRUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration: adiciona observacoes, convenio e limiteConvenio caso o banco já
+-- exista sem essas colunas. 'observacoes' já era referenciada pelo
+-- cliente_repository.py mas nunca existiu neste script (drift órfão —
+-- só existia no banco já em uso via ALTER manual); corrigido aqui junto
+-- com os campos novos de convênio (fiado / controle interno).
+DROP PROCEDURE IF EXISTS sp_add_convenio_cliente;
+DELIMITER //
+CREATE PROCEDURE sp_add_convenio_cliente()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Cliente' AND COLUMN_NAME = 'observacoes'
+    ) THEN
+        ALTER TABLE Cliente ADD COLUMN observacoes TEXT AFTER endereco;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Cliente' AND COLUMN_NAME = 'convenio'
+    ) THEN
+        ALTER TABLE Cliente ADD COLUMN convenio BOOLEAN DEFAULT FALSE AFTER observacoes;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Cliente' AND COLUMN_NAME = 'limiteConvenio'
+    ) THEN
+        ALTER TABLE Cliente ADD COLUMN limiteConvenio DECIMAL(10,2) DEFAULT NULL AFTER convenio;
+    END IF;
+END //
+DELIMITER ;
+
+CALL sp_add_convenio_cliente();
+DROP PROCEDURE IF EXISTS sp_add_convenio_cliente;
 
 -- Tabela de Categorias de Produtos
 CREATE TABLE IF NOT EXISTS Categoria (
@@ -48,14 +84,20 @@ CREATE TABLE IF NOT EXISTS Categoria (
 CREATE TABLE IF NOT EXISTS Produto (
     idProduto INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
+    descricaoResumida VARCHAR(40) DEFAULT NULL,
     descricao TEXT,
     preco DECIMAL(10,2) NOT NULL,
+    precoCusto DECIMAL(10,2) DEFAULT NULL,
+    margemLucro DECIMAL(6,2) DEFAULT NULL,
+    unidadeMedida VARCHAR(10) DEFAULT 'UN',
     estoque INT DEFAULT 0,
+    estoqueMinimo INT DEFAULT 10,
     idCategoria INT,
     codigoBarras VARCHAR(50) DEFAULT NULL,
     ativo BOOLEAN DEFAULT TRUE,
     dataCadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria)
+    FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria),
+    UNIQUE KEY uq_produto_codigo_barras (codigoBarras)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Migration: adiciona codigoBarras caso o banco já exista sem a coluna
@@ -79,6 +121,82 @@ DELIMITER ;
 CALL sp_add_codigo_barras();
 DROP PROCEDURE IF EXISTS sp_add_codigo_barras;
 
+-- Migration: adiciona sku, precoCusto, unidadeMedida e estoqueMinimo caso o
+-- banco já exista sem essas colunas (cadastro de produto - dados essenciais
+-- de ERP, sem nada fiscal)
+DROP PROCEDURE IF EXISTS sp_add_dados_produto_erp;
+DELIMITER //
+CREATE PROCEDURE sp_add_dados_produto_erp()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND COLUMN_NAME = 'sku'
+    ) THEN
+        ALTER TABLE Produto ADD COLUMN sku VARCHAR(50) DEFAULT NULL AFTER nome;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND COLUMN_NAME = 'precoCusto'
+    ) THEN
+        ALTER TABLE Produto ADD COLUMN precoCusto DECIMAL(10,2) DEFAULT NULL AFTER preco;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND COLUMN_NAME = 'unidadeMedida'
+    ) THEN
+        ALTER TABLE Produto ADD COLUMN unidadeMedida VARCHAR(10) DEFAULT 'UN' AFTER precoCusto;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND COLUMN_NAME = 'estoqueMinimo'
+    ) THEN
+        ALTER TABLE Produto ADD COLUMN estoqueMinimo INT DEFAULT 10 AFTER estoque;
+    END IF;
+END //
+DELIMITER ;
+
+CALL sp_add_dados_produto_erp();
+DROP PROCEDURE IF EXISTS sp_add_dados_produto_erp;
+
+-- Migration: redesenho do cadastro de produto - descricaoResumida (nome
+-- reduzido p/ PDV e cupom) e margemLucro (lembrada entre edições). Remove
+-- 'sku', que foi absorvido pelo campo codigoBarras (passa a aceitar tanto
+-- o código de barras real quanto um código interno). Cria UNIQUE em
+-- codigoBarras, já que não pode haver dois produtos com o mesmo código.
+DROP PROCEDURE IF EXISTS sp_redesign_produto_cadastro;
+DELIMITER //
+CREATE PROCEDURE sp_redesign_produto_cadastro()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND COLUMN_NAME = 'descricaoResumida'
+    ) THEN
+        ALTER TABLE Produto ADD COLUMN descricaoResumida VARCHAR(40) DEFAULT NULL AFTER nome;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND COLUMN_NAME = 'margemLucro'
+    ) THEN
+        ALTER TABLE Produto ADD COLUMN margemLucro DECIMAL(6,2) DEFAULT NULL AFTER precoCusto;
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND COLUMN_NAME = 'sku'
+    ) THEN
+        ALTER TABLE Produto DROP COLUMN sku;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Produto' AND INDEX_NAME = 'uq_produto_codigo_barras'
+    ) THEN
+        ALTER TABLE Produto ADD UNIQUE KEY uq_produto_codigo_barras (codigoBarras);
+    END IF;
+END //
+DELIMITER ;
+
+CALL sp_redesign_produto_cadastro();
+DROP PROCEDURE IF EXISTS sp_redesign_produto_cadastro;
+
 -- Tabela de Vendas
 CREATE TABLE IF NOT EXISTS Venda (
     idVenda INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,7 +206,7 @@ CREATE TABLE IF NOT EXISTS Venda (
     desconto DECIMAL(10,2) DEFAULT 0.00,
     acrescimo DECIMAL(10,2) DEFAULT 0.00,
     valorFinal DECIMAL(10,2) NOT NULL,
-    formaPagamento ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'outro') DEFAULT 'dinheiro',
+    formaPagamento VARCHAR(50) DEFAULT 'dinheiro',
     status ENUM('pendente', 'concluida', 'cancelada') DEFAULT 'concluida',
     observacoes TEXT,
     dataVenda TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -131,9 +249,70 @@ CREATE TABLE IF NOT EXISTS ItemVenda (
 CREATE TABLE IF NOT EXISTS PagamentoVenda (
     idPagamento INT AUTO_INCREMENT PRIMARY KEY,
     idVenda INT NOT NULL,
-    formaPagamento ENUM('dinheiro', 'cartao_credito', 'cartao_debito', 'pix', 'outro') NOT NULL,
+    formaPagamento VARCHAR(50) NOT NULL,
     valor DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (idVenda) REFERENCES Venda(idVenda) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration: formaPagamento deixa de ser ENUM fixo e vira VARCHAR, já que as
+-- formas de pagamento passaram a ser cadastradas pelo cliente em Configurações
+-- (lista guardada em Configuracao.formasPagamento). Os valores já gravados
+-- são preservados na conversão.
+DROP PROCEDURE IF EXISTS sp_forma_pagamento_varchar;
+DELIMITER //
+CREATE PROCEDURE sp_forma_pagamento_varchar()
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Venda'
+          AND COLUMN_NAME = 'formaPagamento' AND DATA_TYPE = 'enum'
+    ) THEN
+        ALTER TABLE Venda MODIFY COLUMN formaPagamento VARCHAR(50) DEFAULT 'dinheiro';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PagamentoVenda'
+          AND COLUMN_NAME = 'formaPagamento' AND DATA_TYPE = 'enum'
+    ) THEN
+        ALTER TABLE PagamentoVenda MODIFY COLUMN formaPagamento VARCHAR(50) NOT NULL;
+    END IF;
+END //
+DELIMITER ;
+
+CALL sp_forma_pagamento_varchar();
+DROP PROCEDURE IF EXISTS sp_forma_pagamento_varchar;
+
+-- Tabela de Pagamentos de Convênio (fiado / controle interno): um registro
+-- por "ação de quitação" — pode quitar vários lançamentos de uma vez
+-- (ex: "Pagar Tudo").
+CREATE TABLE IF NOT EXISTS ConvenioPagamento (
+    idPagamento INT AUTO_INCREMENT PRIMARY KEY,
+    idCliente INT NOT NULL,
+    valorTotal DECIMAL(10,2) NOT NULL,
+    formaPagamento VARCHAR(50) NOT NULL,
+    observacao TEXT,
+    idUsuario INT NOT NULL,
+    dataPagamento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
+    FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de Lançamentos de Convênio: um registro por pagamento de venda
+-- feito via convênio (suporta venda com pagamento dividido entre convênio
+-- e outras formas). Fica 'pendente' até ser quitado por um ConvenioPagamento.
+CREATE TABLE IF NOT EXISTS ConvenioLancamento (
+    idLancamento     INT AUTO_INCREMENT PRIMARY KEY,
+    idCliente        INT NOT NULL,
+    idVenda          INT NOT NULL,
+    idPagamentoVenda INT DEFAULT NULL,
+    valor            DECIMAL(10,2) NOT NULL,
+    status           ENUM('pendente','pago') DEFAULT 'pendente',
+    idPagamento      INT DEFAULT NULL,
+    dataLancamento   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
+    FOREIGN KEY (idVenda) REFERENCES Venda(idVenda) ON DELETE CASCADE,
+    FOREIGN KEY (idPagamentoVenda) REFERENCES PagamentoVenda(idPagamento) ON DELETE CASCADE,
+    FOREIGN KEY (idPagamento) REFERENCES ConvenioPagamento(idPagamento)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Configurações gerais do sistema (chave/valor), compartilhadas
@@ -198,7 +377,12 @@ INSERT IGNORE INTO Usuario (nome, email, senha, tipo) VALUES
 ('Vendedor Teste', 'vendedor@salestrack.com', 'vendedor123', 'vendedor');
 
 -- Categorias: nome é UNIQUE, INSERT IGNORE evita duplicação
-INSERT IGNORE INTO Categoria (nome, descricao) VALUES 
+-- 'Geral' é a única categoria fixa do sistema; as demais abaixo já existiam
+-- de versões anteriores e foram mantidas por já estarem em uso por produtos
+-- cadastrados. A partir de agora o usuário cria livremente novas categorias
+-- pela tela de Produtos.
+INSERT IGNORE INTO Categoria (nome, descricao) VALUES
+('Geral', 'Categoria padrão'),
 ('Eletrônicos', 'Produtos eletrônicos e tecnologia'),
 ('Alimentos', 'Produtos alimentícios'),
 ('Bebidas', 'Bebidas em geral'),
@@ -442,6 +626,16 @@ BEGIN
     -- idx_itemvenda_produto
     IF NOT EXISTS (SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ItemVenda' AND INDEX_NAME = 'idx_itemvenda_produto') THEN
         CREATE INDEX idx_itemvenda_produto ON ItemVenda(idProduto);
+    END IF;
+
+    -- idx_convenio_lanc_cliente_status
+    IF NOT EXISTS (SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ConvenioLancamento' AND INDEX_NAME = 'idx_convenio_lanc_cliente_status') THEN
+        CREATE INDEX idx_convenio_lanc_cliente_status ON ConvenioLancamento(idCliente, status);
+    END IF;
+
+    -- idx_convenio_pag_cliente
+    IF NOT EXISTS (SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ConvenioPagamento' AND INDEX_NAME = 'idx_convenio_pag_cliente') THEN
+        CREATE INDEX idx_convenio_pag_cliente ON ConvenioPagamento(idCliente);
     END IF;
 END //
 DELIMITER ;

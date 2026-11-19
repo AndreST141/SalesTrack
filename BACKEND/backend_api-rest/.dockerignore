@@ -8,3 +8,7 @@ venv/
 .venv/
 env/
 .pytest_cache/
+tests/
+requirements-dev.txt
+pytest.ini
+.coverage

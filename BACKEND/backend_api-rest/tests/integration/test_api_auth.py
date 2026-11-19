@@ -28,10 +28,22 @@ class TestAuthApiIntegration:
         assert data['error'] == Geral.CREDENCIAIS_INVALIDAS
 
     @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
-    @patch('app.Services.auth_service.LicencaService.licenca_permite_acesso')
-    def test_post_login_success(self, mock_licenca, mock_find, client):
+    @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
+    def test_post_login_blocked_returns_reason(self, mock_motivo, mock_find, client):
+        """Validates that POST /api/login returns 403 with the exact blocking reason."""
+        mock_motivo.return_value = 'Sistema aguardando configuração dos dados da empresa. Entre em contato com o suporte técnico.'
+        mock_find.return_value = {'idUsuario': 1, 'nome': 'Admin QA', 'email': 'admin@salestrack.com', 'tipo': 'admin'}
+        res = client.post('/api/login', json={'email': 'admin@salestrack.com', 'senha': 'admin123'})
+        assert res.status_code == 403
+        data = res.get_json()
+        assert "dados da empresa" in data['error']
+        assert 'token' not in data
+
+    @patch('app.Services.auth_service.AuthRepository.find_by_credentials')
+    @patch('app.Services.auth_service.LicencaService.motivo_bloqueio')
+    def test_post_login_success(self, mock_motivo, mock_find, client):
         """Validates successful POST /api/login returning 200, auth token, and user data."""
-        mock_licenca.return_value = True
+        mock_motivo.return_value = None
         mock_find.return_value = {
             'idUsuario': 1,
             'nome': 'Admin QA',

@@ -6,16 +6,24 @@ import FilterModal from '../../components/FilterModal/FilterModal';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfig } from '../../contexts/ConfigContext';
+import ImpressaoService from '../../services/impressaoService';
+import { montarComprovante } from '../../utils/comprovante';
 import { formatarDataAtual } from '../../utils/data';
+import { labelFormaPagamento } from '../../utils/pagamento';
 import './style.css';
 
 function Historico() {
     const dataAtual = formatarDataAtual();
     const [vendas, setVendas] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [temMaisVendas, setTemMaisVendas] = useState(false);
+    const [carregandoMais, setCarregandoMais] = useState(false);
+    const VENDAS_POR_LOTE = 100;
     const [vendaSelecionada, setVendaSelecionada] = useState(null);
     const [modalDetalhes, setModalDetalhes] = useState(false);
     const [loadingDetalhes, setLoadingDetalhes] = useState(false);
+    const [reimprimindo, setReimprimindo] = useState(false);
 
     const [modalFiltros, setModalFiltros] = useState(false);
     const [activeFilters, setActiveFilters] = useState({});
@@ -28,23 +36,24 @@ function Historico() {
 
     const { showNotification } = useNotification();
     const { user } = useAuth();
+    const { formasPagamento, dadosEmpresa, configImpressora } = useConfig();
 
     const podeEscalarDireto = ['admin', 'supervisor', 'tecnico'].includes(user?.tipo);
 
     const fmt = (val) =>
         Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    const formatarPagamento = (forma) => {
-        const mapa = {
-            dinheiro: 'Dinheiro',
-            cartao_credito: 'Cartão Crédito',
-            cartao_debito: 'Cartão Débito',
-            pix: 'PIX',
-            convenio: 'Convênio',
-            outro: 'Outro',
-        };
-        return mapa[forma] || forma;
+    const PAGAMENTO_LABELS = {
+        dinheiro: 'Dinheiro',
+        cartao_credito: 'Cartão Crédito',
+        cartao_debito: 'Cartão Débito',
+        pix: 'PIX',
+        convenio: 'Convênio',
+        outro: 'Outro',
     };
+
+    // Formas cadastradas em Configurações entram além das fixas acima
+    const formatarPagamento = (forma) => labelFormaPagamento(forma, formasPagamento, PAGAMENTO_LABELS);
 
     const badgePagamento = (forma) => {
         const classes = {
@@ -61,13 +70,29 @@ function Historico() {
     async function carregarVendas() {
         setLoading(true);
         try {
-            const res = await api.get('/vendas');
+            const res = await api.get(`/vendas?limit=${VENDAS_POR_LOTE}&offset=0`);
             setVendas(res.data);
+            // Se voltou um lote cheio, pode ter mais vendas antigas pra buscar.
+            setTemMaisVendas(res.data.length === VENDAS_POR_LOTE);
         } catch (err) {
             console.error('Erro ao carregar histórico:', err);
             showNotification('Erro ao carregar histórico de vendas', 'error');
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function carregarMaisVendas() {
+        setCarregandoMais(true);
+        try {
+            const res = await api.get(`/vendas?limit=${VENDAS_POR_LOTE}&offset=${vendas.length}`);
+            setVendas((prev) => [...prev, ...res.data]);
+            setTemMaisVendas(res.data.length === VENDAS_POR_LOTE);
+        } catch (err) {
+            console.error('Erro ao carregar mais vendas:', err);
+            showNotification('Erro ao carregar mais vendas', 'error');
+        } finally {
+            setCarregandoMais(false);
         }
     }
 
@@ -87,6 +112,31 @@ function Historico() {
             setModalDetalhes(false);
         } finally {
             setLoadingDetalhes(false);
+        }
+    }
+
+    // Reconstrói o comprovante a partir dos dados já salvos da venda (mesmo
+    // layout/serviço usados ao finalizar — ver vendas.jsx) e reenvia pro
+    // Agente de Impressão local.
+    async function reimprimirComprovante() {
+        if (!vendaSelecionada) return;
+        setReimprimindo(true);
+        try {
+            const linhas = montarComprovante({
+                empresa: dadosEmpresa,
+                venda: vendaSelecionada,
+                colunas: configImpressora.colunas,
+                formasPagamento,
+            });
+            await ImpressaoService.imprimir(configImpressora, linhas);
+            showNotification('Comprovante reenviado para a impressora.', 'success');
+        } catch (err) {
+            const msg = err.agenteIndisponivel
+                ? 'Agente de impressão não encontrado neste computador.'
+                : err.message;
+            showNotification(msg, 'error');
+        } finally {
+            setReimprimindo(false);
         }
     }
 
@@ -133,12 +183,10 @@ function Historico() {
             label: 'Forma de Pagamento',
             type: 'select',
             options: [
-                { value: 'dinheiro', label: 'Dinheiro' },
-                { value: 'cartao_credito', label: 'Cartão Crédito' },
-                { value: 'cartao_debito', label: 'Cartão Débito' },
-                { value: 'pix', label: 'PIX' },
-                { value: 'convenio', label: 'Convênio' },
-                { value: 'outro', label: 'Outro' },
+                ...Object.entries(PAGAMENTO_LABELS).map(([value, label]) => ({ value, label })),
+                ...formasPagamento
+                    .filter((f) => !PAGAMENTO_LABELS[f.value])
+                    .map((f) => ({ value: f.value, label: f.label })),
             ],
         },
         { key: '_dataInicio', label: 'Data Início', type: 'date' },
@@ -245,6 +293,17 @@ function Historico() {
                             </div>
                         )}
                     />
+                    {temMaisVendas && (
+                        <div className="historico-carregar-mais">
+                            <button
+                                className="btn-secondary"
+                                onClick={carregarMaisVendas}
+                                disabled={carregandoMais}
+                            >
+                                {carregandoMais ? 'Carregando...' : `Carregar mais ${VENDAS_POR_LOTE} vendas`}
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <FilterModal
                     isOpen={modalFiltros}
@@ -261,6 +320,26 @@ function Historico() {
                     title={vendaSelecionada ? `Venda #${vendaSelecionada.idVenda}` : 'Detalhes da Venda'}
                     className='modal-footer-buttons'
                     maxWidth="700px"
+                    footer={
+                        vendaSelecionada && (
+                            <>
+                                <button
+                                    className="btn-modal-cancel"
+                                    onClick={() => { setModalDetalhes(false); setVendaSelecionada(null); }}
+                                >
+                                    Fechar
+                                </button>
+                                <button
+                                    className="btn-modal-confirm"
+                                    onClick={reimprimirComprovante}
+                                    disabled={reimprimindo}
+                                    title="Reimprimir o comprovante desta venda"
+                                >
+                                    {reimprimindo ? 'Enviando...' : 'Reimprimir Comprovante'}
+                                </button>
+                            </>
+                        )
+                    }
                 >
                     {loadingDetalhes ? (
                         <p style={{ textAlign: 'center', color: '#94a3b8' }}>Carregando detalhes...</p>

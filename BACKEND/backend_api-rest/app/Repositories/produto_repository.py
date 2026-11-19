@@ -20,17 +20,37 @@ class ProdutoRepository:
         return produtos
 
     @staticmethod
+    def find_by_codigo_barras(codigo_barras, excluir_id=None):
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        if excluir_id:
+            cursor.execute(
+                "SELECT idProduto FROM Produto WHERE codigoBarras = %s AND idProduto != %s",
+                (codigo_barras, excluir_id)
+            )
+        else:
+            cursor.execute("SELECT idProduto FROM Produto WHERE codigoBarras = %s", (codigo_barras,))
+        produto = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return produto
+
+    @staticmethod
     def create(dados):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO Produto (nome, descricao, preco, estoque, idCategoria, codigoBarras)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO Produto (nome, descricaoResumida, preco, precoCusto, margemLucro, unidadeMedida, estoque, estoqueMinimo, idCategoria, codigoBarras)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             dados['nome'],
-            dados.get('descricao', ''),
+            dados.get('descricaoResumida') or None,
             dados['preco'],
+            dados.get('precoCusto') or None,
+            dados.get('margemLucro') or None,
+            dados.get('unidadeMedida') or 'UN',
             dados.get('estoque', 0),
+            dados.get('estoqueMinimo', 10),
             dados.get('idCategoria'),
             dados.get('codigoBarras')
         ))
@@ -46,13 +66,18 @@ class ProdutoRepository:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE Produto
-            SET nome = %s, descricao = %s, preco = %s, estoque = %s, idCategoria = %s, codigoBarras = %s
+            SET nome = %s, descricaoResumida = %s, preco = %s, precoCusto = %s, margemLucro = %s,
+                unidadeMedida = %s, estoque = %s, estoqueMinimo = %s, idCategoria = %s, codigoBarras = %s
             WHERE idProduto = %s
         """, (
             dados['nome'],
-            dados.get('descricao', ''),
+            dados.get('descricaoResumida') or None,
             dados['preco'],
+            dados.get('precoCusto') or None,
+            dados.get('margemLucro') or None,
+            dados.get('unidadeMedida') or 'UN',
             dados.get('estoque', 0),
+            dados.get('estoqueMinimo', 10),
             dados.get('idCategoria'),
             dados.get('codigoBarras'),
             id

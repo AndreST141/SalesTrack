@@ -4,6 +4,9 @@ import Modal from '../../components/Modal/Modal';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useConfig } from '../../contexts/ConfigContext';
+import { useAuth } from '../../contexts/AuthContext';
+import ImpressaoService from '../../services/impressaoService';
+import { montarComprovante } from '../../utils/comprovante';
 import './style.css';
 
 function normalizeStr(str) {
@@ -14,7 +17,8 @@ function normalizeStr(str) {
 }
 
 function Vendas() {
-    const { formasPagamento, permiteEstoqueNegativo } = useConfig();
+    const { formasPagamento, permiteEstoqueNegativo, dadosEmpresa, configImpressora } = useConfig();
+    const { user } = useAuth();
 
     const [produtos, setProdutos] = useState([]);
     const [clientes, setClientes] = useState([]);
@@ -58,7 +62,7 @@ function Vendas() {
     const { showNotification } = useNotification();
 
     const formaAtiva = formasPagamento[pagamentoIndex] || formasPagamento[0];
-    const isConvenio = pagamentoForma === 'convenio';
+    const isConvenio = formasPagamento.find(f => f.value === pagamentoForma)?.especial === 'convenio';
 
     // Inicializar forma padrão quando formasPagamento carrega
     useEffect(() => {
@@ -126,6 +130,7 @@ function Vendas() {
         const resultados = produtos.filter(
             (p) =>
                 (p.nome && normalizeStr(p.nome).includes(termoNorm)) ||
+                (p.descricaoResumida && normalizeStr(p.descricaoResumida).includes(termoNorm)) ||
                 (p.codigoBarras && p.codigoBarras.includes(termoBusca))
         ).slice(0, 8);
         setSugestoes(resultados);
@@ -181,7 +186,7 @@ function Vendas() {
                 ...prev,
                 {
                     idProduto: produto.idProduto,
-                    nome: produto.nome,
+                    nome: produto.descricaoResumida || produto.nome,
                     quantidade: qtd,
                     precoUnitario: produto.preco,
                     subtotal: qtd * produto.preco,
@@ -255,7 +260,7 @@ function Vendas() {
         };
 
         if (isConvenio && clienteConvenioSelecionado) {
-            novoPagamento.clienteConvenio = clienteConvenioSelecionado;
+            novoPagamento.idClienteConvenio = clienteConvenioSelecionado.idCliente;
         }
 
         setPagamentos((prev) => [...prev, novoPagamento]);
@@ -289,12 +294,54 @@ function Vendas() {
             valor: restante,
         };
         if (isConvenio && clienteConvenioSelecionado) {
-            novoPagamento.clienteConvenio = clienteConvenioSelecionado;
+            novoPagamento.idClienteConvenio = clienteConvenioSelecionado.idCliente;
         }
         setPagamentos((prev) => [...prev, novoPagamento]);
         setPagamentoValor('');
         setClienteConvenioSelecionado(null);
         setBuscaConvenio('');
+    }
+
+    // Imprime o comprovante no Agente de Impressão local, reaproveitando o
+    // mesmo layout (montarComprovante) e serviço já usados pela "Página de
+    // Teste" em Configurações. Nunca bloqueia nem reverte a venda — ela já
+    // foi registrada no backend quando isso roda; se o agente não estiver
+    // rodando neste computador, só avisa, não trata como falha da venda.
+    async function imprimirComprovante(idVenda, vendaPayload, itens) {
+        try {
+            const clienteNome = vendaPayload.idCliente
+                ? clientes.find((c) => c.idCliente === vendaPayload.idCliente)?.nome
+                : '';
+            const linhas = montarComprovante({
+                empresa: dadosEmpresa,
+                venda: {
+                    idVenda,
+                    dataVenda: new Date(),
+                    vendedorNome: user?.nome,
+                    clienteNome,
+                    observacoes: vendaPayload.observacoes,
+                    valorTotal: vendaPayload.valorTotal,
+                    desconto: vendaPayload.desconto,
+                    acrescimo: vendaPayload.acrescimo,
+                    valorFinal: vendaPayload.valorFinal,
+                    itens: itens.map((i) => ({
+                        produtoNome: i.nome,
+                        quantidade: i.quantidade,
+                        precoUnitario: i.precoUnitario,
+                        subtotal: i.subtotal,
+                    })),
+                    pagamentos: vendaPayload.pagamentos,
+                },
+                colunas: configImpressora.colunas,
+                formasPagamento,
+            });
+            await ImpressaoService.imprimir(configImpressora, linhas);
+        } catch (err) {
+            const msg = err.agenteIndisponivel
+                ? 'Venda registrada, mas o comprovante não pôde ser impresso (agente de impressão não encontrado neste computador).'
+                : `Venda registrada, mas houve um erro ao imprimir o comprovante: ${err.message}`;
+            showNotification(msg, 'warning');
+        }
     }
 
     const finalizarVenda = useCallback(async (extraPagamentos = []) => {
@@ -340,8 +387,12 @@ function Vendas() {
                 itens: itensVenda,
             };
 
-            await api.post('/vendas', venda);
+            const resVenda = await api.post('/vendas', venda);
             showNotification('Venda finalizada com sucesso!', 'success');
+
+            // Não usa await: a impressão roda em paralelo e nunca deve travar
+            // a tela nem o restante da finalização, que já aconteceu.
+            imprimirComprovante(resVenda.data.id, venda, itensVenda);
 
             const totalPagoDinheiro = todosPagamentos
                 .filter(p => p.forma === 'dinheiro')
@@ -376,7 +427,7 @@ function Vendas() {
         } finally {
             setFinalizando(false);
         }
-    }, [itensVenda, pagamentos, total, subtotal, descontoValor, acrescimoValor, clienteId, cpfNota, formasPagamento, showNotification]);
+    }, [itensVenda, pagamentos, total, subtotal, descontoValor, acrescimoValor, clienteId, cpfNota, formasPagamento, showNotification, clientes, dadosEmpresa, configImpressora, user]);
 
     const selectPaymentMethod = useCallback((value, index) => {
         setPagamentoForma(value);
@@ -386,12 +437,13 @@ function Vendas() {
         // O campo fica vazio de propósito — o valor pendente aparece só como
         // placeholder (visual). Assim, digitar um valor parcial não exige
         // apagar nada antes: o campo já está limpo, pronto para receber.
-        if (value !== 'convenio') {
+        const especial = formasPagamento.find(f => f.value === value)?.especial;
+        if (especial !== 'convenio') {
             setTimeout(() => inputPagamentoValorRef.current?.focus(), 50);
         } else {
             setTimeout(() => inputConvenioRef.current?.focus(), 50);
         }
-    }, []);
+    }, [formasPagamento]);
 
     // Chamado pelo Enter no modal de pagamento (via onConfirm do Modal).
     // Campo vazio = usa o valor pendente mostrado no placeholder (paga tudo).
@@ -415,7 +467,7 @@ function Vendas() {
 
         const novoPagamento = { forma: pagamentoForma, valor: valorAUsar };
         if (isConvenio && clienteConvenioSelecionado) {
-            novoPagamento.clienteConvenio = clienteConvenioSelecionado;
+            novoPagamento.idClienteConvenio = clienteConvenioSelecionado.idCliente;
         }
 
         // Cobre o saldo pendente (com tolerância de 1 centavo) → finaliza direto.
@@ -620,6 +672,7 @@ function Vendas() {
                                         min="1"
                                         value={quantidade}
                                         onChange={(e) => setQuantidade(parseInt(e.target.value) || 1)}
+                                        onFocus={(e) => e.target.select()}
                                         className="qty-input"
                                         disabled={algumModalAberto}
                                     />
@@ -636,13 +689,13 @@ function Vendas() {
                                             onClick={() => selecionarSugestao(p)}
                                         >
                                             <div className="sugestao-info">
-                                                <span className="sugestao-nome">{p.nome}</span>
+                                                <span className="sugestao-nome">{p.descricaoResumida || p.nome}</span>
                                                 <span className="sugestao-codigo">{p.codigoBarras || 'Sem código'}</span>
                                             </div>
                                             <div className="sugestao-preco">
                                                 <span>{fmt(p.preco)}</span>
-                                                <span className={`sugestao-estoque ${p.estoque < 10 ? 'baixo' : ''}`}>
-                                                    Estoque: {p.estoque}
+                                                <span className={`sugestao-estoque ${p.estoque < (p.estoqueMinimo ?? 10) ? 'baixo' : ''}`}>
+                                                    Estoque: {p.estoque} {p.unidadeMedida || 'UN'}
                                                 </span>
                                             </div>
                                         </div>
@@ -661,7 +714,7 @@ function Vendas() {
                                         <th>Qtd</th>
                                         <th>Preço Unit.</th>
                                         <th>Subtotal</th>
-                                        <th></th>
+                                        <th className="item-acoes"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -679,13 +732,16 @@ function Vendas() {
                                                 <td className="item-qtd">{item.quantidade}</td>
                                                 <td>{fmt(item.precoUnitario)}</td>
                                                 <td className="item-subtotal">{fmt(item.subtotal)}</td>
-                                                <td>
+                                                <td className="item-acoes">
                                                     <button
                                                         className="btn-remover-item"
                                                         onClick={() => removerItem(index)}
                                                         title="Remover item"
+                                                        aria-label="Remover item"
                                                     >
-                                                        ✕
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                                            <path d="M18 6L6 18M6 6l12 12" />
+                                                        </svg>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -746,7 +802,7 @@ function Vendas() {
                                             <div className="pagamento-entry" key={i}>
                                                 <span className="pagamento-entry-label">
                                                     {formatarPagamento(p.forma)}
-                                                    {p.clienteConvenio && ` ${p.clienteConvenio.nome}`}
+                                                    {p.idClienteConvenio && ` ${clientes.find(c => c.idCliente === p.idClienteConvenio)?.nome || ''}`}
                                                 </span>
                                                 <span className="pagamento-entry-valor">{fmt(p.valor)}</span>
                                                 <button className="pagamento-entry-remove" onClick={() => removerPagamento(i)}>×</button>
@@ -783,17 +839,6 @@ function Vendas() {
                                 </select>
                             </div>
 
-                            <div className="totais-pinpad">
-                                <div className="pinpad-placeholder">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                        <rect x="2" y="3" width="20" height="18" rx="2" />
-                                        <path d="M8 7h.01M12 7h.01M16 7h.01M8 11h.01M12 11h.01M16 11h.01M8 15h8" />
-                                    </svg>
-                                    <span>Integração Pinpad</span>
-                                    <span className="pinpad-status">Em desenvolvimento</span>
-                                </div>
-                            </div>
-
                             <div className="totais-actions">
                                 <button
                                     className="btn-finalizar"
@@ -821,6 +866,7 @@ function Vendas() {
                     title="Aplicar Desconto"
                     maxWidth="380px"
                     onConfirm={() => setModalDesconto(false)}
+                    closeOnOverlayClick={false}
                     footer={
                         <>
                             <button className="btn-modal-cancel" onClick={() => { setDesconto(''); setModalDesconto(false); }}>Limpar</button>
@@ -848,6 +894,7 @@ function Vendas() {
                     title="Aplicar Acréscimo"
                     maxWidth="380px"
                     onConfirm={() => setModalAcrescimo(false)}
+                    closeOnOverlayClick={false}
                     footer={
                         <>
                             <button className="btn-modal-cancel" onClick={() => { setAcrescimo(''); setModalAcrescimo(false); }}>Limpar</button>
@@ -875,6 +922,7 @@ function Vendas() {
                     title="CPF na Nota"
                     maxWidth="380px"
                     onConfirm={() => setModalCpf(false)}
+                    closeOnOverlayClick={false}
                     footer={
                         <>
                             <button className="btn-modal-cancel" onClick={() => { setCpfNota(''); setModalCpf(false); }}>Limpar</button>
@@ -901,6 +949,7 @@ function Vendas() {
                     title="Forma de Pagamento"
                     maxWidth="580px"
                     onConfirm={handleConfirmPagamento}
+                    closeOnOverlayClick={false}
                     footer={
                         <div className="pagamento-modal-footer-row">
                             <button
@@ -952,7 +1001,6 @@ function Vendas() {
                                     className={`pagamento-modal-option ${pagamentoForma === p.value ? 'ativo' : ''} ${pagamentoIndex === i ? 'focused' : ''}`}
                                     onClick={() => selectPaymentMethod(p.value, i)}
                                 >
-                                    <span className="pagamento-modal-icon">{p.icon}</span>
                                     <span className="pagamento-modal-option-label">{p.label}</span>
                                     <span className="pagamento-modal-shortcut">{p.shortcut}</span>
                                 </button>
@@ -974,7 +1022,7 @@ function Vendas() {
                                         />
                                         {clienteConvenioSelecionado && (
                                             <div className="convenio-selecionado-tag">
-                                                🤝 {clienteConvenioSelecionado.nome}
+                                                {clienteConvenioSelecionado.nome}
                                                 <button onClick={() => { setClienteConvenioSelecionado(null); setBuscaConvenio(''); }}>×</button>
                                             </div>
                                         )}
@@ -1028,7 +1076,7 @@ function Vendas() {
                                         <div className="pagamento-chip" key={i}>
                                             <span className="chip-label">
                                                 {formatarPagamento(p.forma)}
-                                                {p.clienteConvenio && ` · ${p.clienteConvenio.nome}`}
+                                                {p.idClienteConvenio && ` · ${clientes.find(c => c.idCliente === p.idClienteConvenio)?.nome || ''}`}
                                             </span>
                                             <span className="chip-valor">{fmt(p.valor)}</span>
                                             <button className="chip-remove" onClick={() => removerPagamento(i)}>×</button>

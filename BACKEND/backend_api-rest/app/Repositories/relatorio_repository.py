@@ -5,7 +5,9 @@ class RelatorioRepository:
 
     @staticmethod
     def get_vendas_periodo(data_inicio, data_fim):
-        """Todas as vendas no intervalo, sem LIMIT, com pagamentos."""
+        """Vendas concluídas no intervalo, sem LIMIT, com pagamentos. Vendas
+        canceladas ficam de fora — relatórios gerenciais devem refletir
+        negócio efetivamente realizado, não vendas desfeitas."""
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
@@ -13,7 +15,7 @@ class RelatorioRepository:
             FROM Venda v
             LEFT JOIN Cliente c ON v.idCliente = c.idCliente
             JOIN  Usuario u ON v.idUsuario = u.idUsuario
-            WHERE DATE(v.dataVenda) BETWEEN %s AND %s
+            WHERE DATE(v.dataVenda) BETWEEN %s AND %s AND v.status = 'concluida'
             ORDER BY v.dataVenda DESC
         """, (data_inicio, data_fim))
         vendas = cursor.fetchall()
@@ -92,23 +94,29 @@ class RelatorioRepository:
 
     @staticmethod
     def get_estoque_detalhado():
-        """Todos os produtos (ativos e inativos) com última venda e total vendido."""
+        """Todos os produtos (ativos e inativos) com última venda e total vendido.
+
+        O filtro de concluídas fica no LEFT JOIN (no WHERE, produtos sem venda
+        sumiriam). Por isso os SUMs precisam do CASE: itens de venda cancelada
+        continuam na junção com v = NULL e, sem o CASE, eram somados ao total
+        vendido e à receita. valorEstoque fica negativo com estoque negativo
+        (decisão de negócio)."""
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT p.idProduto, p.nome, c.nome AS categoria,
-                   p.descricao, p.preco, p.estoque, p.ativo,
+                   p.descricao, p.preco, p.estoque, p.estoqueMinimo, p.ativo,
                    (p.preco * p.estoque)              AS valorEstoque,
                    MAX(v.dataVenda)                   AS ultimaVenda,
-                   COALESCE(SUM(iv.quantidade), 0)    AS totalVendido,
-                   COALESCE(SUM(iv.subtotal),   0)    AS receitaTotal
+                   COALESCE(SUM(CASE WHEN v.idVenda IS NOT NULL THEN iv.quantidade END), 0) AS totalVendido,
+                   COALESCE(SUM(CASE WHEN v.idVenda IS NOT NULL THEN iv.subtotal   END), 0) AS receitaTotal
             FROM Produto p
             LEFT JOIN Categoria  c  ON p.idCategoria  = c.idCategoria
             LEFT JOIN ItemVenda  iv ON iv.idProduto   = p.idProduto
             LEFT JOIN Venda      v  ON iv.idVenda     = v.idVenda
                                    AND v.status = 'concluida'
             GROUP BY p.idProduto, p.nome, c.nome, p.descricao,
-                     p.preco, p.estoque, p.ativo
+                     p.preco, p.estoque, p.estoqueMinimo, p.ativo
             ORDER BY p.nome
         """)
         rows = cursor.fetchall()

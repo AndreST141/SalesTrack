@@ -8,10 +8,28 @@ class EstoqueInsuficienteError(Exception):
     pass
 
 
+class ClienteNaoConveniadoError(Exception):
+    """Levantado quando um pagamento traz idClienteConvenio mas o cliente
+    não está habilitado para convênio (ou não existe)."""
+    pass
+
+
+class LimiteConvenioExcedidoError(Exception):
+    """Levantado quando um pagamento via convênio ultrapassaria o limite
+    de crédito disponível do cliente."""
+    pass
+
+
+class ConvenioPagamentoExistenteError(Exception):
+    """Levantado ao tentar cancelar uma venda que já teve seu lançamento
+    de convênio quitado — não dá pra apagar um registro de dívida já paga."""
+    pass
+
+
 class VendaRepository:
 
     @staticmethod
-    def get_all():
+    def get_all(limit=100, offset=0):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
@@ -20,8 +38,8 @@ class VendaRepository:
             LEFT JOIN Cliente c ON v.idCliente = c.idCliente
             JOIN Usuario u ON v.idUsuario = u.idUsuario
             ORDER BY v.dataVenda DESC
-            LIMIT 100
-        """)
+            LIMIT %s OFFSET %s
+        """, (limit, offset))
         vendas = cursor.fetchall()
 
         # Buscar pagamentos de todas as vendas retornadas
@@ -104,12 +122,24 @@ class VendaRepository:
         try:
             data_venda = dados.get('dataVenda')
             acrescimo = dados.get('acrescimo', 0) or 0
+
+            # Se nenhum cliente foi selecionado no campo geral da venda, mas um
+            # pagamento usou convênio, vincula a venda a esse cliente — senão
+            # ela fica sem cliente no Histórico/Relatórios mesmo tendo sido
+            # paga (total ou parcialmente) por um cliente conveniado específico.
+            id_cliente = dados.get('idCliente')
+            if not id_cliente:
+                for pag in (dados.get('pagamentos') or []):
+                    if pag.get('idClienteConvenio'):
+                        id_cliente = pag['idClienteConvenio']
+                        break
+
             if data_venda:
                 cursor.execute("""
                     INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, acrescimo, valorFinal, formaPagamento, observacoes, dataVenda)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    dados.get('idCliente'),
+                    id_cliente,
                     usuario_id,
                     dados['valorTotal'],
                     dados.get('desconto', 0),
@@ -124,7 +154,7 @@ class VendaRepository:
                     INSERT INTO Venda (idCliente, idUsuario, valorTotal, desconto, acrescimo, valorFinal, formaPagamento, observacoes)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    dados.get('idCliente'),
+                    id_cliente,
                     usuario_id,
                     dados['valorTotal'],
                     dados.get('desconto', 0),
@@ -175,6 +205,46 @@ class VendaRepository:
                         INSERT INTO PagamentoVenda (idVenda, formaPagamento, valor)
                         VALUES (%s, %s, %s)
                     """, (venda_id, pag['forma'], pag['valor']))
+                    pagamento_venda_id = cursor.lastrowid
+
+                    id_cliente_convenio = pag.get('idClienteConvenio')
+                    if id_cliente_convenio:
+                        # Trava a linha do cliente (FOR UPDATE) para checar e usar o
+                        # limite de forma atomica, evitando corrida entre vendas
+                        # simultaneas do mesmo cliente (mesmo motivo do lock de
+                        # estoque acima, aplicado agora ao limite de convenio).
+                        cursor.execute(
+                            "SELECT convenio, limiteConvenio FROM Cliente WHERE idCliente = %s FOR UPDATE",
+                            (id_cliente_convenio,)
+                        )
+                        cliente = cursor.fetchone()
+                        if not cliente or not cliente[0]:
+                            raise ClienteNaoConveniadoError(
+                                f"Cliente id {id_cliente_convenio} não está habilitado para convênio."
+                            )
+                        if cliente[1] is None:
+                            raise LimiteConvenioExcedidoError(
+                                "Cliente não possui limite de convênio configurado."
+                            )
+                        limite = float(cliente[1])
+
+                        cursor.execute(
+                            "SELECT COALESCE(SUM(valor), 0) FROM ConvenioLancamento WHERE idCliente = %s AND status = 'pendente'",
+                            (id_cliente_convenio,)
+                        )
+                        saldo_devedor = float(cursor.fetchone()[0])
+                        valor_pagamento = float(pag['valor'])
+
+                        if saldo_devedor + valor_pagamento > limite + 0.009:
+                            raise LimiteConvenioExcedidoError(
+                                f'Limite de convênio excedido. Saldo devedor: R$ {saldo_devedor:.2f}, '
+                                f'limite: R$ {limite:.2f}, tentativa: R$ {valor_pagamento:.2f}.'
+                            )
+
+                        cursor.execute("""
+                            INSERT INTO ConvenioLancamento (idCliente, idVenda, idPagamentoVenda, valor, status)
+                            VALUES (%s, %s, %s, %s, 'pendente')
+                        """, (id_cliente_convenio, venda_id, pagamento_venda_id, valor_pagamento))
             else:
                 # Fallback: se não veio array de pagamentos, salva a forma única
                 cursor.execute("""
@@ -204,6 +274,19 @@ class VendaRepository:
             if venda['status'] == 'cancelada':
                 return 'already_cancelled'
 
+            # Trava os lançamentos de convênio desta venda antes de qualquer
+            # outra coisa: se algum já foi quitado, bloqueia o cancelamento
+            # inteiro (não dá pra apagar um registro de dívida já paga).
+            cursor.execute(
+                "SELECT idLancamento, status FROM ConvenioLancamento WHERE idVenda = %s FOR UPDATE",
+                (id,)
+            )
+            lancamentos_convenio = cursor.fetchall()
+            if any(l['status'] == 'pago' for l in lancamentos_convenio):
+                raise ConvenioPagamentoExistenteError(
+                    'Não é possível cancelar: pagamento de convênio já foi registrado para esta venda.'
+                )
+
             cursor.execute(
                 "SELECT idProduto, quantidade FROM ItemVenda WHERE idVenda = %s", (id,)
             )
@@ -219,6 +302,13 @@ class VendaRepository:
                 "UPDATE Venda SET status = 'cancelada', canceladoPor = %s, autorizadoPor = %s WHERE idVenda = %s",
                 (cancelado_por, autorizado_por, id)
             )
+
+            # Todos os lançamentos restantes aqui são 'pendente' (os 'pago'
+            # já teriam disparado o raise acima) — cancelar a venda libera
+            # o limite de convênio do cliente.
+            if lancamentos_convenio:
+                cursor.execute("DELETE FROM ConvenioLancamento WHERE idVenda = %s", (id,))
+
             conn.commit()
             return True
         except Exception as e:

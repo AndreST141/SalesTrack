@@ -50,6 +50,8 @@ class TestCategoriaDashboardServiceUnit:
         mock_top.return_value = [
             {'idProduto': 1, 'nome': 'Churrasquinho Misto', 'quantidadeTotal': 95, 'receitaTotal': '665.00'}
         ]
-        res = DashboardService.get_produtos_mais_vendidos(limite=5)
+        res = DashboardService.get_produtos_mais_vendidos(limite=5, periodo='30')
         assert res['status'] == 200
         assert res['produtos'][0]['receitaTotal'] == 665.0
+        # The period filter must reach the repository (same window as the KPIs)
+        mock_top.assert_called_once_with(5, '30')

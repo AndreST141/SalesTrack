@@ -210,23 +210,6 @@
   color: #1570EF;
 }
 
-.login-panel-inner .linha-esqueceu {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
-}
-
-.login-panel-inner .linha-esqueceu span {
-  font-size: 13px;
-  color: #1570EF;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.login-panel-inner .linha-esqueceu span:hover {
-  text-decoration: underline;
-}
-
 /* ── Botão ── */
 .login-panel-inner .botao-entrar {
   width: 100%;

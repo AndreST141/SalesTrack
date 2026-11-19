@@ -27,16 +27,53 @@ class TestClienteServiceUnit:
         assert res['status'] == 400
         assert res['error'] == 'Nome é obrigatório.'
 
+    @patch('app.Services.cliente_service.ClienteRepository.find_by_cpf')
     @patch('app.Services.cliente_service.ClienteRepository.create')
-    def test_create_success(self, mock_create):
+    def test_create_success(self, mock_create, mock_find_cpf):
         """Validates successful customer creation returning 201."""
+        mock_find_cpf.return_value = None
         mock_create.return_value = 10
-        dados = {'nome': 'Maria Souza', 'cpf': '987.654.321-99', 'telefone': '62988887777'}
+        dados = {'nome': 'Maria Souza', 'cpf': '529.982.247-25', 'telefone': '62988887777'}
         res = ClienteService.create(dados)
         assert res['status'] == 201
         assert res['id'] == 10
         assert res['message'] == Geral.CLIENTE_CADASTRADO
         mock_create.assert_called_once_with(dados)
+
+    @patch('app.Services.cliente_service.ClienteRepository.create')
+    def test_create_success_without_cpf(self, mock_create):
+        """Validates that CPF is optional (no duplicity lookup when empty)."""
+        mock_create.return_value = 11
+        res = ClienteService.create({'nome': 'Cliente Sem CPF', 'cpf': ''})
+        assert res['status'] == 201
+
+    @patch('app.Services.cliente_service.ClienteRepository.create')
+    def test_create_invalid_cpf(self, mock_create):
+        """Validates that a CPF with wrong check digits (or all-equal digits) is rejected."""
+        for cpf in ('987.654.321-99', '111.111.111-11', '123.456'):
+            res = ClienteService.create({'nome': 'Maria Souza', 'cpf': cpf})
+            assert res['status'] == 400
+            assert res['error'] == 'CPF inválido.'
+        mock_create.assert_not_called()
+
+    @patch('app.Services.cliente_service.ClienteRepository.find_by_cpf')
+    @patch('app.Services.cliente_service.ClienteRepository.create')
+    def test_create_duplicate_cpf(self, mock_create, mock_find_cpf):
+        """Validates that a CPF already registered to another customer is rejected."""
+        mock_find_cpf.return_value = {'idCliente': 3}
+        res = ClienteService.create({'nome': 'Maria Souza', 'cpf': '529.982.247-25'})
+        assert res['status'] == 400
+        assert "Já existe um cliente" in res['error']
+        mock_create.assert_not_called()
+
+    @patch('app.Services.cliente_service.ClienteRepository.find_by_cpf')
+    @patch('app.Services.cliente_service.ClienteRepository.update')
+    def test_update_keeping_own_cpf(self, mock_update, mock_find_cpf):
+        """Validates that the duplicity lookup excludes the customer being edited."""
+        mock_find_cpf.return_value = None
+        res = ClienteService.update(7, {'nome': 'Maria Souza', 'cpf': '529.982.247-25'})
+        assert res['status'] == 200
+        mock_find_cpf.assert_called_once_with('529.982.247-25', 7)
 
     def test_update_missing_name(self):
         """Validates that customer update requires a non-empty name."""
@@ -53,13 +90,35 @@ class TestClienteServiceUnit:
         assert res['message'] == Geral.CLIENTE_ATUALIZADO
         mock_update.assert_called_once_with(1, dados)
 
+    @patch('app.Services.cliente_service.ClienteRepository.get_saldo_convenio')
     @patch('app.Services.cliente_service.ClienteRepository.soft_delete')
-    def test_delete_success(self, mock_delete):
+    def test_delete_success(self, mock_delete, mock_saldo):
         """Validates customer soft-deletion."""
+        mock_saldo.return_value = {'convenio': True, 'limiteConvenio': 500.0, 'saldoDevedor': 0}
         res = ClienteService.delete(5)
         assert res['status'] == 200
         assert res['message'] == Geral.CLIENTE_REMOVIDO
         mock_delete.assert_called_once_with(5)
+
+    @patch('app.Services.cliente_service.ClienteRepository.get_saldo_convenio')
+    @patch('app.Services.cliente_service.ClienteRepository.soft_delete')
+    def test_delete_blocked_with_convenio_debt(self, mock_delete, mock_saldo):
+        """Validates that a customer with pending convenio debt cannot be removed."""
+        mock_saldo.return_value = {'convenio': True, 'limiteConvenio': 500.0, 'saldoDevedor': 120.0}
+        res = ClienteService.delete(5)
+        assert res['status'] == 400
+        assert res['error'] == Geral.CLIENTE_REMOCAO_BLOQUEADA_SALDO
+        mock_delete.assert_not_called()
+
+    @patch('app.Services.cliente_service.ClienteRepository.get_saldo_convenio')
+    @patch('app.Services.cliente_service.ClienteRepository.update')
+    def test_disable_convenio_blocked_with_debt(self, mock_update, mock_saldo):
+        """Validates that convenio cannot be disabled while the customer still owes."""
+        mock_saldo.return_value = {'convenio': True, 'limiteConvenio': 500.0, 'saldoDevedor': 50.0}
+        res = ClienteService.update(5, {'nome': 'Maria Souza', 'convenio': False})
+        assert res['status'] == 400
+        assert res['error'] == Geral.CLIENTE_CONVENIO_DESABILITAR_BLOQUEADO
+        mock_update.assert_not_called()
 
     @patch('app.Services.cliente_service.ClienteRepository.reactivate')
     def test_reactivate_success(self, mock_reactivate):

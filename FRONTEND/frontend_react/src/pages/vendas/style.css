@@ -267,25 +267,53 @@
     font-weight: 700;
 }
 
+/* Coluna do botão de remover: largura mínima (não absorve a sobra da
+   tabela) e botão sempre encostado na borda direita, em qualquer largura */
+.body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table .item-acoes {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
 .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody .btn-remover-item {
     width: 28px;
     height: 28px;
+    padding: 0;
     border: none;
     background: #fef2f2;
     color: #dc2626;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 700;
     transition: all 0.2s;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    vertical-align: middle;
+}
+
+.body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody .btn-remover-item svg {
+    width: 14px;
+    height: 14px;
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody .btn-remover-item:hover {
     background: #dc2626;
     color: #fff;
+}
+
+.body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody .btn-remover-item:active {
+    transform: scale(0.92);
+}
+
+/* Telas estreitas: o painel direito tem largura fixa (360px), então a
+   tabela de itens encolhe — reduz o espaçamento pra coluna do botão de
+   remover não ser empurrada pra fora do card */
+@media (max-width: 1100px) {
+    .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table thead th,
+    .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody td {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
 }
 
 .body-vendas .content-vendas .vendas-content .vendas-left .itens-venda-wrapper .itens-venda-table tbody .itens-empty {
@@ -458,44 +486,6 @@
     border-color: #1570EF;
 }
 
-/* ── Pinpad ───────────────────────────────────────────────────────── */
-.body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pinpad {
-    padding: 14px 20px;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pinpad .pinpad-placeholder {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 10px;
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-}
-
-.body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pinpad .pinpad-placeholder svg {
-    width: 28px;
-    height: 28px;
-    color: #94a3b8;
-}
-
-.body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pinpad .pinpad-placeholder span {
-    font-size: 12px;
-    color: #94a3b8;
-    font-weight: 500;
-}
-
-.body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-pinpad .pinpad-placeholder .pinpad-status {
-    font-size: 10px;
-    color: #d97706;
-    background: #fef3c7;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 600;
-}
-
 /* ── Actions ──────────────────────────────────────────────────────── */
 .body-vendas .content-vendas .vendas-content .vendas-right .totais-card .totais-actions {
     padding: 16px 20px;
@@ -641,10 +631,6 @@
     border-color: #1570EF;
     background: #1570EF;
     color: #fff;
-}
-
-.pagamento-modal-grid .pagamento-modal-option .pagamento-modal-icon {
-    font-size: 18px;
 }
 
 .pagamento-modal-grid .pagamento-modal-option .pagamento-modal-option-label {
@@ -953,6 +939,10 @@
     padding: 16px 20px;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
+}
+
+.convenio-busca-wrapper {
+    position: relative;
 }
 
 .convenio-input-field-wrapper {

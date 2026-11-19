@@ -26,9 +26,9 @@ class TestProdutoServiceUnit:
 
     def test_create_missing_name(self):
         """Validates that creating a product without a name returns 400."""
-        res = ProdutoService.create({'preco': 10.0, 'estoque': 5})
+        res = ProdutoService.create({'preco': 10.0, 'estoque': 5, 'codigoBarras': '1'})
         assert res['status'] == 400
-        assert "Nome e um preço maior que zero são obrigatórios" in res['error']
+        assert "Descrição e um preço de venda maior que zero são obrigatórios" in res['error']
 
     def test_create_invalid_prices(self):
         """Validates that prices <= 0 or invalid non-numeric inputs are rejected."""
@@ -44,17 +44,65 @@ class TestProdutoServiceUnit:
         res_none = ProdutoService.create({'nome': 'Produto None', 'preco': None})
         assert res_none['status'] == 400
 
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
     @patch('app.Services.produto_service.ProdutoRepository.create')
-    def test_create_success(self, mock_create):
+    def test_create_success(self, mock_create, mock_find_codigo):
         """Validates successful product creation returning 201 and new ID."""
+        mock_find_codigo.return_value = None
         mock_create.return_value = 15
-        dados = {'nome': 'Curau de Milho', 'preco': 7.50, 'estoque': 20, 'idCategoria': 1}
+        dados = {'nome': 'Curau de Milho', 'preco': 7.50, 'estoque': 20, 'idCategoria': 1, 'codigoBarras': '7891000100103'}
 
         res = ProdutoService.create(dados)
         assert res['status'] == 201
         assert res['id'] == 15
         assert res['message'] == Geral.PRODUTO_CADASTRADO
         mock_create.assert_called_once_with(dados)
+
+    @patch('app.Services.produto_service.ProdutoRepository.create')
+    def test_create_missing_barcode(self, mock_create):
+        """Validates that the barcode is mandatory."""
+        for codigo in (None, '', '   '):
+            res = ProdutoService.create({'nome': 'Curau', 'preco': 7.5, 'codigoBarras': codigo})
+            assert res['status'] == 400
+            assert res['error'] == 'Código de barras é obrigatório.'
+        mock_create.assert_not_called()
+
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
+    @patch('app.Services.produto_service.ProdutoRepository.create')
+    def test_create_duplicate_barcode(self, mock_create, mock_find_codigo):
+        """Validates that a barcode already used by another product is rejected."""
+        mock_find_codigo.return_value = {'idProduto': 2}
+        res = ProdutoService.create({'nome': 'Curau', 'preco': 7.5, 'codigoBarras': '1'})
+        assert res['status'] == 400
+        assert "já está em uso" in res['error']
+        mock_create.assert_not_called()
+
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
+    def test_create_optional_fields_validation(self, mock_find_codigo):
+        """Validates precoCusto, estoqueMinimo and margemLucro (DECIMAL(6,2) range) rules."""
+        mock_find_codigo.return_value = None
+        base = {'nome': 'Curau', 'preco': 7.5, 'codigoBarras': '1'}
+        casos = [
+            ({'precoCusto': -1}, 'Preço de custo não pode ser negativo.'),
+            ({'precoCusto': 'abc'}, 'Preço de custo inválido.'),
+            ({'estoqueMinimo': -2}, 'Estoque mínimo não pode ser negativo.'),
+            ({'estoqueMinimo': 'x'}, 'Estoque mínimo inválido.'),
+            ({'margemLucro': 10000}, 'Margem de lucro fora do intervalo permitido (até 9999,99%).'),
+            ({'margemLucro': -10000}, 'Margem de lucro fora do intervalo permitido (até 9999,99%).'),
+            ({'margemLucro': 'y'}, 'Margem de lucro inválida.'),
+        ]
+        for extra, mensagem in casos:
+            res = ProdutoService.create({**base, **extra})
+            assert res['status'] == 400, extra
+            assert res['error'] == mensagem
+
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
+    def test_gerar_codigo_barras_sequencial(self, mock_find_codigo):
+        """Validates that the generated code is the first short sequential number not in use."""
+        mock_find_codigo.side_effect = lambda codigo, excluir_id=None: {'idProduto': 1} if codigo in ('1', '2') else None
+        res = ProdutoService.gerar_codigo_barras()
+        assert res['status'] == 200
+        assert res['codigoBarras'] == '3'
 
     def test_update_missing_name_or_invalid_price(self):
         """Validates that updates require valid name and positive price."""
@@ -64,14 +112,17 @@ class TestProdutoServiceUnit:
         res_bad_price = ProdutoService.update(1, {'nome': 'Nome Ok', 'preco': 0})
         assert res_bad_price['status'] == 400
 
+    @patch('app.Services.produto_service.ProdutoRepository.find_by_codigo_barras')
     @patch('app.Services.produto_service.ProdutoRepository.update')
-    def test_update_success(self, mock_update):
-        """Validates successful product update."""
-        dados = {'nome': 'Curau Especial', 'preco': 8.00}
+    def test_update_success(self, mock_update, mock_find_codigo):
+        """Validates successful product update (barcode lookup excludes the product itself)."""
+        mock_find_codigo.return_value = None
+        dados = {'nome': 'Curau Especial', 'preco': 8.00, 'codigoBarras': '5'}
         res = ProdutoService.update(1, dados)
         assert res['status'] == 200
         assert res['message'] == Geral.PRODUTO_ATUALIZADO
         mock_update.assert_called_once_with(1, dados)
+        mock_find_codigo.assert_called_once_with('5', 1)
 
     @patch('app.Services.produto_service.ProdutoRepository.soft_delete')
     def test_delete_product(self, mock_delete):

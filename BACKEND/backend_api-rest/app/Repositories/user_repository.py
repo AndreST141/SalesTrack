@@ -27,6 +27,17 @@ class UserRepository:
         return user
 
     @staticmethod
+    def existe_gerenciavel(user_id):
+        """Usuário existe e pode ser gerenciado pela tela (o técnico não pode)."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM Usuario WHERE idUsuario = %s AND tipo != 'tecnico'", (user_id,))
+        existe = cursor.fetchone() is not None
+        cursor.close()
+        conn.close()
+        return existe
+
+    @staticmethod
     def create(nome, email, senha, tipo):
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -48,12 +59,12 @@ class UserRepository:
         if senha:
             hashed = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             cursor.execute(
-                "UPDATE Usuario SET nome=%s, tipo=%s, senha=%s WHERE idUsuario=%s",
+                "UPDATE Usuario SET nome=%s, tipo=%s, senha=%s WHERE idUsuario=%s AND tipo != 'tecnico'",
                 (nome, tipo, hashed, user_id)
             )
         else:
             cursor.execute(
-                "UPDATE Usuario SET nome=%s, tipo=%s WHERE idUsuario=%s",
+                "UPDATE Usuario SET nome=%s, tipo=%s WHERE idUsuario=%s AND tipo != 'tecnico'",
                 (nome, tipo, user_id)
             )
         conn.commit()
@@ -64,7 +75,16 @@ class UserRepository:
     def delete(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE Usuario SET ativo=FALSE WHERE idUsuario=%s", (user_id,))
+        cursor.execute("UPDATE Usuario SET ativo=FALSE WHERE idUsuario=%s AND tipo != 'tecnico'", (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    @staticmethod
+    def reactivate(user_id):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE Usuario SET ativo=TRUE WHERE idUsuario=%s AND tipo != 'tecnico'", (user_id,))
         conn.commit()
         cursor.close()
         conn.close()

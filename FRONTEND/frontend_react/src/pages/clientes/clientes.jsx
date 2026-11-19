@@ -7,26 +7,8 @@ import ModalConvenio from './ModalConvenio';
 import api from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { formatarDataAtual } from '../../utils/data';
+import { mascaraCPF, mascaraTelefone, mascaraCEP } from '../../utils/mascaras';
 import './style.css';
-
-// ── Máscaras ──────────────────────────────────────────────
-function mascaraCPF(v) {
-    const n = v.replace(/\D/g, '').slice(0, 11);
-    return n.replace(/^(\d{3})(\d)/, '$1.$2')
-            .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
-            .replace(/\.(\d{3})(\d)/, '.$1-$2');
-}
-
-function mascaraTelefone(v) {
-    const n = v.replace(/\D/g, '').slice(0, 11);
-    if (n.length <= 10) return n.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/\($/, '(');
-    return n.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
-}
-
-function mascaraCEP(v) {
-    const n = v.replace(/\D/g, '').slice(0, 8);
-    return n.length > 5 ? n.slice(0, 5) + '-' + n.slice(5) : n;
-}
 
 // ── Validação CPF ─────────────────────────────────────────
 function validarCPF(cpf) {
@@ -66,8 +48,12 @@ function Clientes() {
     const [modalForm, setModalForm] = useState(false);
     const [modalConfirmarInativar, setModalConfirmarInativar] = useState(false);
     const [modalConvenio, setModalConvenio] = useState(false);
+    const [modalHabilitarConvenio, setModalHabilitarConvenio] = useState(false);
     const [clienteSelecionado, setClienteSelecionado] = useState(null);
     const [clienteConvenio, setClienteConvenio] = useState(null);
+    const [clienteParaHabilitar, setClienteParaHabilitar] = useState(null);
+    const [limiteHabilitar, setLimiteHabilitar] = useState('');
+    const [habilitandoConvenio, setHabilitandoConvenio] = useState(false);
     const [form, setForm] = useState(formInicial);
     const [salvando, setSalvando] = useState(false);
     const [inativando, setInativando] = useState(false);
@@ -171,6 +157,47 @@ function Clientes() {
     function abrirConvenio(cliente) {
         setClienteConvenio(cliente);
         setModalConvenio(true);
+    }
+
+    function abrirHabilitarConvenio(cliente) {
+        setClienteParaHabilitar(cliente);
+        setLimiteHabilitar('');
+        setModalHabilitarConvenio(true);
+    }
+
+    function handleLimiteHabilitarChange(value) {
+        const onlyNums = String(value).replace(/\D/g, '');
+        if (!onlyNums) { setLimiteHabilitar(''); return; }
+        const numeric = parseInt(onlyNums, 10) / 100;
+        setLimiteHabilitar(numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    }
+
+    async function confirmarHabilitarConvenio() {
+        const limiteNum = parseFloat(String(limiteHabilitar).replace(/\./g, '').replace(',', '.')) || 0;
+        if (limiteNum <= 0) {
+            showNotification('Informe um limite de crédito válido', 'warning');
+            return;
+        }
+        setHabilitandoConvenio(true);
+        try {
+            await api.put(`/clientes/${clienteParaHabilitar.idCliente}`, {
+                nome: clienteParaHabilitar.nome,
+                cpf: clienteParaHabilitar.cpf || null,
+                telefone: clienteParaHabilitar.telefone || null,
+                email: clienteParaHabilitar.email || null,
+                endereco: clienteParaHabilitar.endereco || null,
+                observacoes: clienteParaHabilitar.observacoes || null,
+                convenio: true,
+                limiteConvenio: limiteNum,
+            });
+            showNotification('Convênio habilitado com sucesso!', 'success');
+            setModalHabilitarConvenio(false);
+            await carregarClientes();
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Erro ao habilitar convênio', 'error');
+        } finally {
+            setHabilitandoConvenio(false);
+        }
     }
 
     async function salvarCliente() {
@@ -306,8 +333,8 @@ function Clientes() {
     const filterDefinitions = [
         { key: 'idCliente', label: 'ID do Cliente', type: 'text', placeholder: 'Ex: 1', exactMatch: true },
         { key: 'nome', label: 'Nome', type: 'text', placeholder: 'Nome do cliente...' },
-        { key: 'cpf', label: 'CPF', type: 'text', placeholder: '000.000.000-00' },
-        { key: 'telefone', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000' },
+        { key: 'cpf', label: 'CPF', type: 'text', placeholder: '000.000.000-00', mask: 'cpf', digitsOnly: true },
+        { key: 'telefone', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000', mask: 'telefone', digitsOnly: true },
         { key: 'email', label: 'Email', type: 'text', placeholder: 'email@exemplo.com' },
         {
             key: '_status',
@@ -372,23 +399,34 @@ function Clientes() {
                         onFilterClick={() => setModalFiltros(true)}
                         headerActions={
                             <button className="btn-primary" onClick={abrirModalNovo}>
-                                + Novo Cliente
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                                Novo Cliente
                             </button>
                         }
                         actions={(item) => (
                             <>
-                                <button className="btn-action" onClick={() => abrirModalEditar(item)}>
-                                    Editar
-                                </button>
-                                {item.convenio && (
+                                {item.convenio ? (
                                     <button
                                         className="btn-action btn-convenio"
                                         onClick={() => abrirConvenio(item)}
                                         title="Ver convênio do cliente"
                                     >
-                                        🤝 Convênio
+                                        Visualizar Convênio
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="btn-action btn-habilitar-convenio"
+                                        onClick={() => abrirHabilitarConvenio(item)}
+                                        title="Habilitar convênio para este cliente"
+                                    >
+                                        Habilitar Convênio
                                     </button>
                                 )}
+                                <button className="btn-action" onClick={() => abrirModalEditar(item)}>
+                                    Editar
+                                </button>
                             </>
                         )}
                     />
@@ -408,6 +446,7 @@ function Clientes() {
                     onClose={() => setModalForm(false)}
                     title={clienteSelecionado ? 'Editar Cliente' : 'Novo Cliente'}
                     onConfirm={salvarCliente}
+                    closeOnOverlayClick={false}
                     footer={
                         <div className="modal-footer-split">
                             {clienteSelecionado && (
@@ -525,7 +564,7 @@ function Clientes() {
                     <div className="convenio-section">
                         <div className="convenio-toggle-row">
                             <div className="convenio-toggle-info">
-                                <span className="convenio-toggle-label">🤝 Habilitar Convênio</span>
+                                <span className="convenio-toggle-label">Habilitar Convênio</span>
                                 <span className="convenio-toggle-desc">
                                     Permite que o cliente compre a prazo com limite definido
                                 </span>
@@ -610,6 +649,41 @@ function Clientes() {
                     cliente={clienteConvenio}
                     onUpdate={carregarClientes}
                 />
+
+                {/* Modal Habilitar Convênio (atalho rápido pela tabela) */}
+                <Modal
+                    isOpen={modalHabilitarConvenio}
+                    onClose={() => setModalHabilitarConvenio(false)}
+                    title="Habilitar Convênio"
+                    maxWidth="400px"
+                    onConfirm={confirmarHabilitarConvenio}
+                    closeOnOverlayClick={false}
+                    footer={
+                        <>
+                            <button className="btn-modal-cancel" onClick={() => setModalHabilitarConvenio(false)}>
+                                Cancelar
+                            </button>
+                            <button className="btn-modal-confirm" onClick={confirmarHabilitarConvenio} disabled={habilitandoConvenio}>
+                                {habilitandoConvenio ? 'Salvando...' : 'Habilitar'}
+                            </button>
+                        </>
+                    }
+                >
+                    <p className="confirm-message" style={{ marginBottom: 16 }}>
+                        Habilitar convênio para <strong>"{clienteParaHabilitar?.nome}"</strong>
+                    </p>
+                    <div className="form-group">
+                        <label>Limite de Crédito (R$) *</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            autoFocus
+                            value={limiteHabilitar}
+                            onChange={(e) => handleLimiteHabilitarChange(e.target.value)}
+                            placeholder="0,00"
+                        />
+                    </div>
+                </Modal>
             </div>
         </div>
     );

@@ -45,6 +45,12 @@
     flex: 1;
 }
 
+.body-historico .historico-carregar-mais {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
 /* ── Detail Items Table (inside modal) ────────────────────────────── */
 .detail-items-table {
     width: 100%;

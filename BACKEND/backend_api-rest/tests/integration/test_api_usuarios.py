@@ -49,19 +49,31 @@ class TestUsuariosApiIntegration:
         assert data['success'] is True
         assert data['id'] == 12
 
+    @patch('app.Services.user_service.UserRepository.existe_gerenciavel')
     @patch('app.Services.user_service.UserRepository.update')
-    def test_put_usuario_as_admin_success(self, mock_update, client, admin_headers):
+    def test_put_usuario_as_admin_success(self, mock_update, mock_existe, client, admin_headers):
         """Validates user update by administrator."""
+        mock_existe.return_value = True
         payload = {'nome': 'Caixa Renomeado', 'tipo': 'supervisor'}
         res = client.put('/api/usuarios/12', headers=admin_headers, json=payload)
         assert res.status_code == 200
         data = res.get_json()
         assert data['success'] is True
 
+    @patch('app.Services.user_service.UserRepository.existe_gerenciavel')
     @patch('app.Services.user_service.UserRepository.delete')
-    def test_delete_usuario_as_admin_success(self, mock_delete, client, admin_headers):
+    def test_delete_usuario_as_admin_success(self, mock_delete, mock_existe, client, admin_headers):
         """Validates user inativation by administrator."""
+        mock_existe.return_value = True
         res = client.delete('/api/usuarios/12', headers=admin_headers)
         assert res.status_code == 200
         data = res.get_json()
         assert data['success'] is True
+
+    @patch('app.Services.user_service.UserRepository.delete')
+    def test_delete_own_user_blocked(self, mock_delete, client, admin_headers):
+        """Validates that the logged admin (id 1 in the fixture) cannot inactivate itself."""
+        res = client.delete('/api/usuarios/1', headers=admin_headers)
+        assert res.status_code == 400
+        assert "próprio usuário" in res.get_json()['error']
+        mock_delete.assert_not_called()
