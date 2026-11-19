@@ -9,6 +9,8 @@ class RelatorioService:
         for v in vendas:
             v['valorTotal'] = float(v['valorTotal'])
             v['desconto']   = float(v['desconto'])
+            # acrescimo pode vir NULL em vendas anteriores à coluna existir
+            v['acrescimo']  = float(v.get('acrescimo') or 0)
             v['valorFinal'] = float(v['valorFinal'])
             v['dataVenda']  = v['dataVenda'].strftime('%Y-%m-%dT%H:%M:%S')
             for p in v.get('pagamentos', []):

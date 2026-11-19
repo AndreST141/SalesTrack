@@ -326,3 +326,127 @@ class TestRepositoriesUnit:
         mock_cursor.fetchone.return_value = {'idVenda': 6, 'status': 'cancelada'}
         res = VendaRepository.cancel(id=6)
         assert res == 'already_cancelled'
+
+
+def _norm(sql):
+    """Colapsa espaços/quebras de linha para comparar trechos de SQL."""
+    return ' '.join(sql.split())
+
+
+@pytest.fixture
+def relatorio_db():
+    """Conexão e cursor mockados para RelatorioRepository (nenhum banco real)."""
+    with patch('app.Repositories.relatorio_repository.get_db_connection') as mock_get_conn:
+        conn, cursor = MagicMock(), MagicMock()
+        mock_get_conn.return_value = conn
+        conn.cursor.return_value = cursor
+        cursor.fetchall.return_value = []
+        yield conn, cursor
+
+
+class TestRelatorioRepositoryUnit:
+    """Protege as regras de negócio que vivem no SQL dos relatórios — em
+    especial o filtro de vendas concluídas (BUG-003: relatórios somavam
+    vendas canceladas). Sem esses testes, remover o filtro não quebrava nada."""
+
+    def _sqls(self, cursor):
+        return [_norm(c.args[0]) for c in cursor.execute.call_args_list]
+
+    # ---------- get_vendas_periodo ----------
+
+    def test_vendas_periodo_filtra_concluidas_e_parametriza_datas(self, relatorio_db):
+        conn, cursor = relatorio_db
+        RelatorioRepository.get_vendas_periodo('2026-10-01', '2026-10-31')
+        sql, params = cursor.execute.call_args_list[0].args
+        sql = _norm(sql)
+        assert "v.status = 'concluida'" in sql
+        assert 'DATE(v.dataVenda) BETWEEN %s AND %s' in sql
+        assert params == ('2026-10-01', '2026-10-31')
+        assert '2026-10-01' not in sql          # datas nunca concatenadas no SQL
+        cursor.close.assert_called_once()
+        conn.close.assert_called_once()
+
+    def test_vendas_periodo_vazio_nao_busca_pagamentos(self, relatorio_db):
+        _, cursor = relatorio_db
+        assert RelatorioRepository.get_vendas_periodo('2026-10-01', '2026-10-31') == []
+        assert cursor.execute.call_count == 1   # sem segunda query com IN ()
+
+    def test_vendas_periodo_agrupa_pagamentos_por_venda(self, relatorio_db):
+        _, cursor = relatorio_db
+        cursor.fetchall.side_effect = [
+            [{'idVenda': 7, 'valorFinal': 50}, {'idVenda': 8, 'valorFinal': 30}],
+            [
+                {'idVenda': 7, 'formaPagamento': 'pix',      'valor': 20},
+                {'idVenda': 7, 'formaPagamento': 'dinheiro', 'valor': 30},
+            ],
+        ]
+        vendas = RelatorioRepository.get_vendas_periodo('2026-10-01', '2026-10-31')
+
+        sql_pag, params_pag = cursor.execute.call_args_list[1].args
+        assert 'WHERE idVenda IN (%s,%s)' in _norm(sql_pag)
+        assert params_pag == (7, 8)
+        por_id = {v['idVenda']: v for v in vendas}
+        assert por_id[7]['pagamentos'] == [
+            {'formaPagamento': 'pix', 'valor': 20},
+            {'formaPagamento': 'dinheiro', 'valor': 30},
+        ]
+        assert por_id[8]['pagamentos'] == []    # venda sem pagamento não herda os da outra
+
+    # ---------- get_produtos_mais_vendidos ----------
+
+    def test_mais_vendidos_filtra_concluidas_e_parametriza_limite(self, relatorio_db):
+        _, cursor = relatorio_db
+        RelatorioRepository.get_produtos_mais_vendidos('2026-10-01', '2026-10-31', 10)
+        sql, params = cursor.execute.call_args.args
+        sql = _norm(sql)
+        assert "v.status = 'concluida'" in sql
+        assert 'LIMIT %s' in sql
+        assert 'ORDER BY totalVendido DESC' in sql
+        assert params == ('2026-10-01', '2026-10-31', 10)
+
+    # ---------- get_produtos_sem_movimento ----------
+
+    def test_sem_movimento_considera_so_vendas_concluidas(self, relatorio_db):
+        """Produto cuja única venda foi cancelada continua 'sem movimento'."""
+        _, cursor = relatorio_db
+        RelatorioRepository.get_produtos_sem_movimento('2026-10-01', '2026-10-31')
+        sql, params = cursor.execute.call_args.args
+        sql = _norm(sql)
+        assert 'p.ativo = TRUE' in sql
+        assert 'NOT IN' in sql
+        subquery = sql.split('NOT IN', 1)[1]
+        assert "v.status = 'concluida'" in subquery
+        assert params == ('2026-10-01', '2026-10-31')
+
+    # ---------- get_estoque_detalhado ----------
+
+    def test_estoque_detalhado_filtro_de_status_fica_no_join(self, relatorio_db):
+        """O filtro de concluídas precisa estar no LEFT JOIN, não no WHERE:
+        no WHERE, produtos sem venda (ou só com vendas canceladas) sumiriam
+        do relatório de estoque."""
+        _, cursor = relatorio_db
+        RelatorioRepository.get_estoque_detalhado()
+        sql = _norm(cursor.execute.call_args.args[0])
+        assert "LEFT JOIN Venda v ON iv.idVenda = v.idVenda AND v.status = 'concluida'" in sql
+        assert 'WHERE' not in sql
+
+    def test_estoque_detalhado_nao_soma_itens_de_venda_cancelada(self, relatorio_db):
+        """Com o filtro no JOIN, item de venda cancelada continua na junção
+        (v = NULL). Os SUMs precisam ignorá-lo — antes, totalVendido e
+        receitaTotal incluíam vendas canceladas (ex.: Feijão 1kg 203 em vez
+        de 198 no banco de desenvolvimento)."""
+        _, cursor = relatorio_db
+        RelatorioRepository.get_estoque_detalhado()
+        sql = _norm(cursor.execute.call_args.args[0])
+        assert 'SUM(CASE WHEN v.idVenda IS NOT NULL THEN iv.quantidade END)' in sql
+        assert 'SUM(CASE WHEN v.idVenda IS NOT NULL THEN iv.subtotal END)' in sql
+        assert 'SUM(iv.quantidade)' not in sql
+        assert 'SUM(iv.subtotal)' not in sql
+
+    def test_estoque_detalhado_valor_negativo_nao_e_truncado(self, relatorio_db):
+        """Decisão de negócio: estoque negativo gera valorEstoque negativo."""
+        _, cursor = relatorio_db
+        RelatorioRepository.get_estoque_detalhado()
+        sql = _norm(cursor.execute.call_args.args[0])
+        assert '(p.preco * p.estoque) AS valorEstoque' in sql
+        assert 'GREATEST' not in sql
