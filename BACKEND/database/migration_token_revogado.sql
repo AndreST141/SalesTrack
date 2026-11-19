@@ -9,3 +9,7 @@ CREATE TABLE IF NOT EXISTS TokenRevogado (
     INDEX idx_data_expiracao (dataExpiracao),
     FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Garante configuracao padrao de dadosEmpresa caso ainda nao configurada
+INSERT IGNORE INTO Configuracao (chave, valor) 
+VALUES ('dadosEmpresa', '{"cadastro":{"razaoSocial":"SalesTrack Comércio","nomeFantasia":"SalesTrack","cnpj":"12.345.678/0001-90"}}');
